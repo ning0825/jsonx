@@ -9,11 +9,6 @@
           <div class="subtitle">The only JSON formatter you need</div>
         </div>
       </div>
-      <div class="nav-right">
-        <button class="menu-btn">
-          <i class="menu-icon">☰</i>
-        </button>
-      </div>
     </nav>
 
     <!-- 工具栏 -->
@@ -73,7 +68,10 @@
         @input="formatJson"
         placeholder="在此输入 JSON"
       ></textarea>
-      <div class="resizer" @mousedown="startResize"></div>
+      <div class="resizer" 
+        @mousedown="startResize"
+        @dblclick="resetSize"
+      ></div>
       <div 
         class="output-area"
         @click="toggleCollapse"
@@ -134,7 +132,7 @@ export default {
           this.rawFormattedText = '';
         }
       } catch (e) {
-        // 解析错误信息
+        // 解析错信息
         const errorMessage = e.message;
         const position = e.message.match(/position (\d+)/);
         let errorPosition = position ? parseInt(position[1]) : null;
@@ -636,6 +634,23 @@ export default {
       }
       
       return sorted;
+    },
+    resetSize() {
+      const content = document.querySelector('.content');
+      const contentRect = content.getBoundingClientRect();
+      const contentWidth = contentRect.width - 40;  // 减去内边距
+      
+      const leftArea = document.querySelector('.input-area');
+      const rightArea = document.querySelector('.output-area');
+      const toolbarContent = document.querySelector('.toolbar-content');
+      
+      // 重置为 50-50 的布局
+      const halfWidth = contentWidth / 2;
+      leftArea.style.flex = `0 1 ${halfWidth}px`;
+      rightArea.style.flex = `0 1 ${halfWidth}px`;
+      
+      // 更新工具栏宽度
+      toolbarContent.style.width = `${halfWidth}px`;
     }
   },
   beforeUnmount() {
@@ -649,7 +664,7 @@ export default {
     }
   },
   mounted() {
-    // 初始化时设置 toolbar-content 的宽度
+    // 初始化时设置 toolbar-content 的宽
     this.$nextTick(() => {
       const content = document.querySelector('.content');
       const contentRect = content.getBoundingClientRect();
@@ -657,7 +672,7 @@ export default {
       const leftArea = document.querySelector('.input-area');
       const toolbarContent = document.querySelector('.toolbar-content');
       
-      // 设置工具栏宽度，与 output-area 对齐
+      // 设置工具栏宽度，与 output-area 齐
       toolbarContent.style.width = `${contentWidth - leftArea.offsetWidth}px`;
     });
   }
@@ -678,6 +693,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: #fafafa;
 }
 
 .app {
@@ -687,16 +703,15 @@ html, body {
   padding: 0;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #fafafa;
 }
 
 .navbar {
   width: 100%;
-  height: 60px;
-  background-color: #ffffff;
+  padding: 20px 20px 0px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
 }
 
 .nav-left {
@@ -792,7 +807,6 @@ html, body {
 .toolbar {
   width: 100%;
   padding: 10px 20px 0 20px;
-  background-color: #ffffff;
   display: flex;
   justify-content: flex-end;
 }
@@ -940,7 +954,7 @@ html, body {
   ), rgba(255, 255, 0, 0.2) !important;
 }
 
-/* 移除不再需要的式 */
+/* 移不再需要的式 */
 .highlight-overlay,
 .highlighted-line {
   display: none;
@@ -1055,15 +1069,13 @@ html, body {
   flex: 0 0 4px;
 }
 
-.resizer:hover,
-.resizer:active {
-  background-color: #e0e0e0;
-}
-
 /* 拖动时禁用文本选择 */
 body.resizing {
   user-select: none;
   cursor: col-resize;
+  /* & .resizer {
+    background-color: #e0e0e0;
+  } */
 }
 
 .json-line.collapsible {
