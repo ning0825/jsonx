@@ -4,6 +4,10 @@
     <nav class="navbar">
       <div class="nav-left">
         <img src="./assets/logo.png" alt="Logo" class="logo">
+        <div class="title-container">
+          <div class="title">JsonX</div>
+          <div class="subtitle">The only JSON formatter you need</div>
+        </div>
       </div>
       <div class="nav-right">
         <button class="menu-btn">
@@ -43,7 +47,7 @@
               type="text" 
               class="search-input" 
               v-model="searchText"
-              placeholder="搜索..."
+              placeholder="Search..."
               @input="searchContent"
               @focus="onSearchFocus"
             >
@@ -270,7 +274,7 @@ export default {
       this.searchDebounceTimer = setTimeout(() => {
         if (!this.searchText || !this.rawFormattedText) {
           this.showSearchResults = false;
-          // 移除所有���亮
+          // 移除所有亮
           const outputArea = document.querySelector('.output-area');
           const lines = outputArea.querySelectorAll('.json-line');
           lines.forEach(line => line.classList.remove('search-highlight'));
@@ -350,7 +354,7 @@ export default {
       const targetPosition = (lineNumber - 1) * lineHeight;
       const scrollTop = targetPosition - (visibleHeight / 2) + lineHeight + paddingTop;
 
-      // 平滑滚动到目标位置
+      // 滑滚动到目标位置
       textarea.scrollTo({
         top: Math.max(0, scrollTop),
         behavior: 'smooth'
@@ -586,7 +590,7 @@ export default {
         const obj = JSON.parse(this.inputJson);
         const formattedText = JSON.stringify(obj, null, 2);
         await navigator.clipboard.writeText(formattedText);
-        // 可以添加一个提示，告诉用户复制���功
+        // 可以添加一个提示，告诉用户复制功
         alert('复制成功！');
       } catch (err) {
         // 如果解析失败或复制失败
@@ -606,7 +610,7 @@ export default {
         this.rawFormattedText = this.formatJsonRaw(sortedObj);
         
       } catch (e) {
-        alert('排序失败：无效的 JSON 格式');
+        alert('排序失败无效的 JSON 格式');
       }
     },
     sortObject(obj, order = 'asc') {
@@ -925,7 +929,7 @@ html, body {
 }
 
 .search-highlight {
-  background-color: rgba(255, 255, 0, 0.2);  /* 黄色高亮 */
+  background-color: rgba(255, 255, 0, 0.2);  /* 黄高亮 */
 }
 
 /* 当同时存在两种亮时的样式 */
@@ -1079,6 +1083,36 @@ body.resizing {
   text-align: right;
   padding-right: 8px;
   user-select: none;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  line-height: 1;  /* 设置行高为 1，使其等于字体大小 */
+  display: block;  /* 确保元素表现一致 */
+  padding: 0;      /* 移除内边距 */
+  margin: 0;       /* 移除外边距 */
+}
+
+.subtitle {
+  color: #666;
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 2px;
+  line-height: 1;  /* 同样设置行高为 1 */
+  display: block;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.title-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 12px;
+  gap: 2px;        /* 使用 gap 替代 margin-top 来控制间距 */
 }
 
 </style>
