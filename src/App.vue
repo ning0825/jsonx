@@ -1031,4 +1031,39 @@ body.resizing {
 .json-line:hover>.toggle-icon {
   color: #333;
 }
+
+/* 添加自定义滚动条样式 */
+.input-area::-webkit-scrollbar,
+.output-area::-webkit-scrollbar {
+  width: 6px;
+  /* 将滚动条宽度设置为原来的一半 */
+  height: 6px;
+  /* 水平滚动条的高度 */
+}
+
+.input-area::-webkit-scrollbar-track,
+.output-area::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  /* 更浅的轨道颜色 */
+  border-radius: 3px;
+}
+
+.input-area::-webkit-scrollbar-thumb,
+.output-area::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  /* 更浅的滑块颜色 */
+  border-radius: 3px;
+}
+
+.input-area::-webkit-scrollbar-thumb:hover,
+.output-area::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+  /* 悬停时的颜色 */
+}
+
+/* 修改滚动条交叉处的样式 */
+.input-area::-webkit-scrollbar-corner,
+.output-area::-webkit-scrollbar-corner {
+  background: #f5f5f5;
+}
 </style>
