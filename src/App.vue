@@ -44,6 +44,17 @@
         </div>
       </div>
     </div>
+
+    <!-- 添加内容区域 -->
+    <div class="content">
+      <!-- 左侧输入框 -->
+      <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
+      <!-- 编辑器 -->
+      <div class="my-editor">
+        <VueJSONEditor :content="content" :readOnly="readOnly" :mainMenuBar="false" :navigationBar="false"
+          @onSelect="onSelectionChange" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -55,6 +66,8 @@ import UnescapeIcon from '@/components/icons/UnescapeIcon.vue'
 import CopyIcon from '@/components/icons/CopyIcon.vue'
 import SortAscIcon from '@/components/icons/SortAscIcon.vue'
 import SortDescIcon from '@/components/icons/SortDescIcon.vue'
+import VueJSONEditor from '@/components/VueJSONEditor.vue';
+import { Textarea } from "@/components/ui/textarea"
 
 export default {
   name: 'App',
@@ -66,10 +79,38 @@ export default {
     CopyIcon,
     SortAscIcon,
     SortDescIcon,
+    VueJSONEditor,
+    Textarea,
   },
   data() {
     return {
       searchText: '',
+      readOnly: true,
+      content: {
+        json: {
+          greeting: 'Hello World',
+          color: '#ff3e00', name: 'adfadf',
+          ok: true,
+          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        },
+        text: undefined,
+      },
+      inputText: '',
+      selection: '',
+    }
+  },
+  mounted() {
+    // 监听编辑器内容区域的双击事件
+    const editorContent = document.querySelector('.my-editor');
+    if (editorContent) {
+      editorContent.addEventListener('dblclick', this.handleDoubleClick);
+    }
+  },
+  beforeUnmount() {
+    // 移除事件监听
+    const editorContent = document.querySelector('.my-editor');
+    if (editorContent) {
+      editorContent.removeEventListener('dblclick', this.handleDoubleClick);
     }
   },
   methods: {
@@ -96,12 +137,66 @@ export default {
     },
     onSearchFocus() {
       // 搜索框获得焦点时的处理
+    },
+    handleDoubleClick(event) {
+      const selection = window.getSelection();
+      const selectedText = selection.toString().trim();
+
+      if (selectedText) {
+        navigator.clipboard.writeText(selectedText).then(() => {
+          // 可以添加一个提示，表示复制成功
+          console.log('Copied to clipboard:', selectedText);
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+        });
+      }
+    },
+    onSelectionChange(selection) {
+      console.log('Selection changed:', selection);
+    }
+  },
+  watch: {
+    inputText: {
+      handler(newValue) {
+        try {
+          if (!newValue) {
+            this.content = { json: {} };
+            return;
+          }
+          const jsonObj = JSON.parse(newValue);
+          this.content = {
+            json: jsonObj,
+            text: undefined
+          };
+        } catch (e) {
+          // JSON 解析错误时不更新 content
+          console.error('Invalid JSON:', e);
+        }
+      },
+      immediate: true
+    },
+
+    selection: {
+      handler(newValue) {
+        console.log(newValue)
+      },
+      immediate: true
     }
   }
 }
 </script>
 
 <style scoped>
+/* https://github.com/josdejong/svelte-jsoneditor/blob/main/src/lib/themes/defaults.scss */
+.my-editor {
+  max-width: 100%;
+  width: 100%;
+  flex: 1;
+  padding: 20px;
+  border-radius: 10px;
+  --jse-value-color-number: #db53f7;
+}
+
 /* 导航栏样式 */
 .navbar {
   display: flex;
@@ -144,13 +239,9 @@ export default {
   width: 100%;
   padding: 10px 20px 0 20px;
   display: flex;
-  position: relative;
-  z-index: 10;
 }
 
 .toolbar-content {
-  position: absolute;
-  left: calc(50% + 20px);
   display: flex;
   align-items: flex-start;
   padding: 0;
@@ -190,7 +281,37 @@ export default {
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   font-family: sans-serif;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  padding: 20px;
+  gap: 20px;
+  height: calc(100vh - 60px - 56px);
+  /* 减去导航栏和工具栏的高度 */
+  overflow: hidden;
+}
+
+.input-area {
+  width: 400px;
+  flex-shrink: 0;
+  resize: none;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.my-editor {
+  flex: 1;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
 }
 </style>
