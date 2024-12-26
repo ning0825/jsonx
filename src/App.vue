@@ -6,7 +6,6 @@
         <img src="./assets/logo.png" alt="Logo" class="logo">
         <div class="title-container">
           <div class="title">JsonX</div>
-          <div class="subtitle">The only JSON formatter you need</div>
         </div>
       </div>
     </nav>
