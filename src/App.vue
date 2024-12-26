@@ -167,7 +167,6 @@ export default {
   max-width: 100%;
   width: 100%;
   flex: 1;
-  padding: 20px;
   border-radius: 10px;
   --jse-value-color-number: #db53f7;
 }

@@ -69,7 +69,12 @@ export default {
         console.log('mounted => ', this);
         this.editor = createJSONEditor({
             target: this.$refs['editor'],
-            props: this,
+            props: {
+                content: this.content,
+                readOnly: this.readOnly,
+                mainMenuBar: this.mainMenuBar,
+                navigationBar: this.navigationBar,
+            },
         });
     },
     updated() {
@@ -91,6 +96,16 @@ export default {
     beforeUnmount() {
         this.editor.destroy();
         this.editor = null;
+    },
+    watch: {
+        content: {
+            handler(newValue) {
+                if (this.editor) {
+                    this.editor.updateProps({ content: newValue });
+                }
+            },
+            immediate: true
+        }
     }
 }
 </script>
