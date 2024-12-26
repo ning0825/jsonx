@@ -51,8 +51,7 @@
       <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
       <!-- 编辑器 -->
       <div class="my-editor">
-        <VueJSONEditor :content="content" :readOnly="readOnly" :mainMenuBar="false" :navigationBar="false"
-          @onSelect="onSelectionChange" />
+        <VueJSONEditor :content="content" :readOnly="readOnly" :mainMenuBar="false" :navigationBar="false" />
       </div>
     </div>
   </div>
@@ -96,22 +95,21 @@ export default {
         text: undefined,
       },
       inputText: '',
-      selection: '',
     }
   },
   mounted() {
     // 监听编辑器内容区域的双击事件
-    const editorContent = document.querySelector('.my-editor');
-    if (editorContent) {
-      editorContent.addEventListener('dblclick', this.handleDoubleClick);
-    }
+    // const editorContent = document.querySelector('.my-editor');
+    // if (editorContent) {
+    //   editorContent.addEventListener('dblclick', this.handleDoubleClick);
+    // }
   },
   beforeUnmount() {
     // 移除事件监听
-    const editorContent = document.querySelector('.my-editor');
-    if (editorContent) {
-      editorContent.removeEventListener('dblclick', this.handleDoubleClick);
-    }
+    // const editorContent = document.querySelector('.my-editor');
+    // if (editorContent) {
+    //   editorContent.removeEventListener('dblclick', this.handleDoubleClick);
+    // }
   },
   methods: {
     compressJson() {
@@ -138,22 +136,6 @@ export default {
     onSearchFocus() {
       // 搜索框获得焦点时的处理
     },
-    handleDoubleClick(event) {
-      const selection = window.getSelection();
-      const selectedText = selection.toString().trim();
-
-      if (selectedText) {
-        navigator.clipboard.writeText(selectedText).then(() => {
-          // 可以添加一个提示，表示复制成功
-          console.log('Copied to clipboard:', selectedText);
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-        });
-      }
-    },
-    onSelectionChange(selection) {
-      console.log('Selection changed:', selection);
-    }
   },
   watch: {
     inputText: {
@@ -175,13 +157,6 @@ export default {
       },
       immediate: true
     },
-
-    selection: {
-      handler(newValue) {
-        console.log(newValue)
-      },
-      immediate: true
-    }
   }
 }
 </script>
