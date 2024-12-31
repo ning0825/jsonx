@@ -78,51 +78,11 @@ export default {
         this.$refs.editor.addEventListener('click', this.handleClick);
     },
     updated() {
-        // const updatedProps = filterProps(this, this.prevProps);
-        // this.prevProps = updatedProps;
-        const myRendererAction = {
-            action: (node) => {
-                // attach something to the HTML DOM node
-                return {
-                    update: (node) => {
-                        // update the DOM
-                        return node;
-                    },
-                    destroy: () => {
-                        // cleanup the DOM
-                    }
-                }
-            }
-        }
-        console.log('updated => ', this);
-        console.log('updated => ', Object.keys(this));
-        console.log('updated => ', this.content);
-        console.log('updated => ', this.readOnly);
-        console.log('updated => ', this.mainMenuBar);
-        console.log('updated => ', this.navigationBar);
         this.editor.updateProps({
             content: this.content,
             readOnly: this.readOnly,
             mainMenuBar: this.mainMenuBar,
             navigationBar: this.navigationBar,
-            onRenderValue: (p) => [myRendererAction]
-            // onRenderValue: (params) => [{
-            //     action: (node) => {
-            //         return {
-            //             update: (node) => {
-            //                 // update the DOM
-            //                 return '<div>123</div>';
-            //             },
-            //             destroy: () => {
-            //                 // cleanup the DOM
-            //             }
-            //         }
-            //     },
-            //     props: {
-            //         style: 'color: blue; font-weight: bold;',
-            //         innerHTML: 'Custom Render'
-            //     }
-            // }]
         });
     },
     beforeUnmount() {
