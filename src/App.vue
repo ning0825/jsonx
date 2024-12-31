@@ -50,7 +50,8 @@
       <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
       <!-- 编辑器 -->
       <div class="my-editor">
-        <VueJSONEditor :content="content" :readOnly="readOnly" :mainMenuBar="false" :navigationBar="false" />
+        <VueJSONEditor ref="jsonEditor" :content="content" :readOnly="readOnly" :mainMenuBar="false"
+          :navigationBar="false" />
       </div>
     </div>
   </div>
@@ -112,7 +113,10 @@ export default {
   },
   methods: {
     compressJson() {
-      // 压缩功能
+      const editor = this.$refs.jsonEditor.editor;
+      if (editor) {
+        editor.expand([], () => true); // 或者 'none' 来折叠所有
+      }
     },
     escapeJson() {
       // 转义功能
@@ -166,8 +170,7 @@ export default {
   max-width: 100%;
   width: 100%;
   flex: 1;
-  border-radius: 10px;
-  --jse-value-color-number: #db53f7;
+  --jse-value-color-number: #f75e53;
 }
 
 /* 导航栏样式 */
@@ -176,8 +179,6 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background-color: #f0f0f0;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .nav-left {
@@ -212,6 +213,7 @@ export default {
   width: 100%;
   padding: 10px 20px 0 20px;
   display: flex;
+  justify-content: flex-end;
 }
 
 .toolbar-content {
@@ -235,7 +237,6 @@ export default {
 .search-input {
   padding: 4px 8px;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
   font-size: 14px;
   width: 200px;
 }
@@ -256,6 +257,7 @@ export default {
   flex-direction: column;
   height: 100vh;
   font-family: sans-serif;
+  background-color: #fafafa;
 }
 
 .content {
@@ -273,7 +275,6 @@ export default {
   flex-shrink: 0;
   resize: none;
   height: 100%;
-  border-radius: 8px;
   border: 1px solid #e0e0e0;
   padding: 10px;
   font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
@@ -284,7 +285,6 @@ export default {
 .my-editor {
   flex: 1;
   height: 100%;
-  border-radius: 8px;
   overflow: hidden;
 }
 </style>
