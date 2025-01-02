@@ -8,41 +8,22 @@
           <div class="title">JsonX</div>
         </div>
       </div>
-    </nav>
-
-    <!-- 工具栏 -->
-    <div class="toolbar">
       <div class="toolbar-content">
-        <Button class="mr-2" variant="outline" size="icon" title="压缩" @click="compressJson">
-          <CompressIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="转义" @click="escapeJson">
-          <EscapeIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="去除转义" @click="unescapeJson">
-          <UnescapeIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="复制" @click="copyToClipboard">
-          <CopyIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="升序" @click="sortJson('asc')">
-          <SortAscIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="降序" @click="sortJson('desc')">
-          <SortDescIcon />
-        </Button>
-        <Button class="mr-2" variant="outline" size="icon" title="JS对象转JSON" @click="jsToJson">
-          <SortDescIcon />
-        </Button>
-        <div style="flex: 1;"></div>
-        <div class="search-wrapper">
+        <ExpandedIcon class="mr-2" @click="expandJson" />
+        <CompressIcon class="mr-2" @click="compressJson" />
+        <EscapeIcon class="mr-2" />
+        <UnescapeIcon class="mr-2" />
+        <CopyIcon class="mr-2" />
+        <SortAscIcon class="mr-2" />
+        <SortDescIcon class="mr-2" />
+        <!-- <div class="search-wrapper">
           <div class="search-container">
             <input type="text" class="search-input" v-model="searchText" placeholder="Search..." @input="searchContent"
               @focus="onSearchFocus">
           </div>
-        </div>
+        </div> -->
       </div>
-    </div>
+    </nav>
 
     <!-- 添加内容区域 -->
     <div class="content">
@@ -67,6 +48,7 @@ import SortAscIcon from '@/components/icons/SortAscIcon.vue'
 import SortDescIcon from '@/components/icons/SortDescIcon.vue'
 import VueJSONEditor from '@/components/VueJSONEditor.vue';
 import { Textarea } from "@/components/ui/textarea"
+import ExpandedIcon from '@/components/icons/ExpandedIcon.vue'
 
 export default {
   name: 'App',
@@ -80,6 +62,7 @@ export default {
     SortDescIcon,
     VueJSONEditor,
     Textarea,
+    ExpandedIcon,
   },
   data() {
     return {
@@ -112,10 +95,16 @@ export default {
     // }
   },
   methods: {
+    expandJson() {
+      const editor = this.$refs.jsonEditor.editor;
+      if (editor) {
+        editor.expand([], () => true); // 展开所有节点
+      }
+    },
     compressJson() {
       const editor = this.$refs.jsonEditor.editor;
       if (editor) {
-        editor.expand([], () => true); // 或者 'none' 来折叠所有
+        editor.expand([], () => false); // 折叠所有节点
       }
     },
     escapeJson() {
@@ -170,20 +159,52 @@ export default {
   max-width: 100%;
   width: 100%;
   flex: 1;
+  height: 100%;
+  overflow: hidden;
   --jse-value-color-number: #f75e53;
+}
+
+>>>.jse-tree-mode.no-main-menu.svelte-vrx1dr {
+  border: none;
+  padding: 20px;
+}
+
+>>>.jse-tree-mode.svelte-vrx1dr {
+  background-color: #00000000;
+}
+
+>>>.jse-tree-mode.svelte-vrx1dr .jse-contents:where(.svelte-vrx1dr) {
+  background-color: #00000000;
+  border: none;
+}
+
+>>>.jse-tree-mode.svelte-vrx1dr .jse-contents:where(.svelte-vrx1dr):last-child {
+  border-bottom: none;
+}
+
+>>>textarea:focus-visible {
+  --tw-ring-color: #00000000;
+  outline: none;
+  /* box-shadow: 0 0 0 2px var(--tw-ring-color); */
+  border: 1px solid rgba(0, 0, 0, 0.418);
 }
 
 /* 导航栏样式 */
 .navbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 10px 20px;
+  padding: 20px 20px;
+  position: relative;
 }
 
 .nav-left {
   display: flex;
   align-items: center;
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .logo {
@@ -208,20 +229,13 @@ export default {
   color: #666;
 }
 
-/* 工具栏样式 */
-.toolbar {
-  width: 100%;
-  padding: 10px 20px 0 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .toolbar-content {
-  display: flex;
-  align-items: flex-start;
-  padding: 0;
-  z-index: 10;
-  background-color: #fafafa;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 100px;
+  white-space: nowrap;
 }
 
 /* 搜索框样式 */
@@ -248,43 +262,98 @@ export default {
 
 /* 按钮样式 */
 .mr-2 {
-  margin-right: 8px;
+  margin-right: 12px;
 }
 
 /* 其他样式 */
 .app {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   height: 100vh;
   font-family: sans-serif;
-  background-color: #fafafa;
+  overflow: hidden;
+  background-image: url('@/assets/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .content {
   display: flex;
   flex: 1;
-  padding: 20px;
+  padding: 0px 20px 20px 20px;
   gap: 20px;
-  height: calc(100vh - 60px - 56px);
-  /* 减去导航栏和工具栏的高度 */
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
 .input-area {
   width: 400px;
-  flex-shrink: 0;
   resize: none;
   height: 100%;
-  border: 1px solid #e0e0e0;
-  padding: 10px;
+  padding: 20px;
   font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.5;
+  background-color: rgba(250, 250, 250, 0.9);
 }
 
-.my-editor {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
+/* 自定义滚动条样式 */
+.input-area::-webkit-scrollbar,
+.my-editor::-webkit-scrollbar {
+  width: 6px;
+}
+
+.input-area::-webkit-scrollbar-track,
+.my-editor::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  /* 浅灰色轨道 */
+}
+
+.input-area::-webkit-scrollbar-thumb,
+.my-edito::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  /* 浅灰色滑块 */
+  border-radius: 3px;
+}
+
+.input-area::-webkit-scrollbar-thumb:hover,
+.my-editor::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+  /* 悬停时稍微深一点 */
+}
+
+.input-area::-webkit-scrollbar-corner,
+.my-editor::-webkit-scrollbar-corner {
+  background: #f5f5f5;
+}
+
+/* 修改 toolbar-content 中的图标样式 */
+.toolbar-content .mr-2 {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.toolbar-content .mr-2:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.toolbar-content .mr-2:active {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: translateY(0px);
+}
+
+/* 修改图标颜色 */
+.toolbar-content svg {
+  color: #303030;
+  transition: color 0.2s ease;
+}
+
+.toolbar-content .mr-2:hover svg {
+  color: #0a0a0a;
 }
 </style>

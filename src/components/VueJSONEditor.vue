@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { createJSONEditor } from 'vanilla-jsoneditor';
+import { createJSONEditor, ColorPicker } from 'vanilla-jsoneditor';
 
 // JSONEditor properties as of version 2.3.1
 // const supportedPropNames = [
@@ -71,6 +71,17 @@ export default {
                 readOnly: this.readOnly,
                 mainMenuBar: this.mainMenuBar,
                 navigationBar: this.navigationBar,
+                // onRenderValue: (props) => {
+                //     const value = props.value;
+                //     const type = Array.isArray(value) ? 'array' : typeof value;
+                //     return [{
+                //         component: ColorPicker,
+                //         props: {
+                //             ...props,
+                //             value: `${props.value} [${type}]`
+                //         }
+                //     }]
+                // }
             },
         });
 
@@ -83,6 +94,18 @@ export default {
             readOnly: this.readOnly,
             mainMenuBar: this.mainMenuBar,
             navigationBar: this.navigationBar,
+            // onRenderValue: (props) => {
+            //     const value = props.value;
+            //     const type = Array.isArray(value) ? 'array' : typeof value;
+            //     console.log(props)
+            //     return [{
+            //         component: ColorPicker,
+            //         props: {
+            //             ...props,
+            //             value: `${props.value} [${type}]`
+            //         }
+            //     }]
+            // }
         });
     },
     beforeUnmount() {
@@ -127,6 +150,17 @@ export default {
                     }, 350);
                 });
             }
+        },
+
+        getTypeIcon(value) {
+            if (Array.isArray(value)) return '📑'; // 数组
+            switch (typeof value) {
+                case 'string': return '📝'; // 字符串
+                case 'number': return '🔢'; // 数字
+                case 'boolean': return '⭕'; // 布尔值
+                case 'object': return value === null ? '❌' : '📦'; // null或对象
+                default: return '❓'; // 其他类型
+            }
         }
     }
 }
@@ -135,7 +169,7 @@ export default {
 <style>
 .vue-jsoneditor {
     height: 100%;
-    border-radius: 20px;
+    background-color: rgba(250, 250, 250, 0.9);
 }
 
 .json-type {
