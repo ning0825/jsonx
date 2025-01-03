@@ -182,9 +182,9 @@ export default {
   border-bottom: none;
 }
 
->>>textarea:focus-visible {
-  --tw-ring-color: #00000000;
-  outline: none;
+>>>textarea:focus {
+  /* --tw-ring-color: #00000000; */
+  /* outline: none; */
   /* box-shadow: 0 0 0 2px var(--tw-ring-color); */
   border: 1px solid rgba(0, 0, 0, 0.418);
 }
