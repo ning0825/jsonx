@@ -8,14 +8,20 @@
           <div class="title">JsonX</div>
         </div>
       </div>
+    </nav>
+
+    <div>
+      <div class="toolbar-paste" style="position: absolute; left: 10px;">
+        <PasteButton class="mr-2" @click="handlePaste" />
+      </div>
       <div class="toolbar-content">
-        <ExpandedIcon class="mr-2" @click="expandJson" />
-        <CompressIcon class="mr-2" @click="compressJson" />
-        <EscapeIcon class="mr-2" />
-        <UnescapeIcon class="mr-2" />
-        <CopyIcon class="mr-2" />
-        <SortAscIcon class="mr-2" />
-        <SortDescIcon class="mr-2" />
+        <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
+        <CopyIcon class="mr-2" @click="copyToClipboard" />
+        <!-- <CompressIcon class="mr-2" @click="compressJson" />
+      <EscapeIcon class="mr-2" />
+      <UnescapeIcon class="mr-2" />
+      <SortAscIcon class="mr-2" />
+      <SortDescIcon class="mr-2" /> -->
         <!-- <div class="search-wrapper">
           <div class="search-container">
             <input type="text" class="search-input" v-model="searchText" placeholder="Search..." @input="searchContent"
@@ -23,7 +29,7 @@
           </div>
         </div> -->
       </div>
-    </nav>
+    </div>
 
     <!-- 添加内容区域 -->
     <div class="content">
@@ -49,6 +55,7 @@ import SortDescIcon from '@/components/icons/SortDescIcon.vue'
 import VueJSONEditor from '@/components/VueJSONEditor.vue';
 import { Textarea } from "@/components/ui/textarea"
 import ExpandedIcon from '@/components/icons/ExpandedIcon.vue'
+import PasteButton from '@/components/icons/PasteButton.vue'
 
 export default {
   name: 'App',
@@ -63,6 +70,7 @@ export default {
     VueJSONEditor,
     Textarea,
     ExpandedIcon,
+    PasteButton,
   },
   data() {
     return {
@@ -78,34 +86,46 @@ export default {
         text: undefined,
       },
       inputText: '',
+      isExpanded: false,
     }
   },
   mounted() {
-    // 监听编辑器内容区域的双击事件
-    // const editorContent = document.querySelector('.my-editor');
-    // if (editorContent) {
-    //   editorContent.addEventListener('dblclick', this.handleDoubleClick);
-    // }
+    // 等待 DOM 更新完成
+    this.$nextTick(() => {
+      // 获取 my-editor 的位置
+      const editor = document.querySelector('.my-editor');
+      const content = document.querySelector('.content');
+      if (editor && content) {
+        const editorLeft = editor.getBoundingClientRect().left;
+        const toolbarContent = document.querySelector('.toolbar-content');
+        if (toolbarContent) {
+          // 设置 toolbar-content 的左边距
+          toolbarContent.style.marginLeft = `${editorLeft}px`;
+          toolbarContent.style.marginRight = '0';
+        }
+      }
+    });
+
+    // 监听窗口大小变化，重新计算位置
+    window.addEventListener('resize', this.updateToolbarPosition);
   },
   beforeUnmount() {
     // 移除事件监听
-    // const editorContent = document.querySelector('.my-editor');
-    // if (editorContent) {
-    //   editorContent.removeEventListener('dblclick', this.handleDoubleClick);
-    // }
+    window.removeEventListener('resize', this.updateToolbarPosition);
   },
   methods: {
-    expandJson() {
+    toggleExpand() {
+      this.isExpanded = !this.isExpanded;
       const editor = this.$refs.jsonEditor.editor;
       if (editor) {
-        editor.expand([], () => true); // 展开所有节点
+        if (this.isExpanded) {
+          editor.collapse([], false);
+        } else {
+          editor.expand([], () => true);
+        }
       }
     },
     compressJson() {
-      const editor = this.$refs.jsonEditor.editor;
-      if (editor) {
-        editor.expand([], () => false); // 折叠所有节点
-      }
     },
     escapeJson() {
       // 转义功能
@@ -114,7 +134,31 @@ export default {
       // 去除转义功能
     },
     copyToClipboard() {
-      // 复制功能
+      const editor = this.$refs.jsonEditor.editor;
+      if (editor) {
+        const content = JSON.stringify(this.content.json, null, 2);
+        navigator.clipboard.writeText(content).then(() => {
+          // 创建提示元素
+          const button = document.querySelector('.toolbar-content .mr-2:nth-child(2)'); // CopyIcon 按钮
+          const tooltip = document.createElement('div');
+          tooltip.textContent = 'copied!';
+          tooltip.className = 'copy-tooltip';
+
+          // 设置提示元素的位置
+          const rect = button.getBoundingClientRect();
+          tooltip.style.position = 'fixed';
+          tooltip.style.left = `${rect.left}px`;
+          tooltip.style.top = `${rect.top - 25}px`; // 在按钮上方显示
+
+          // 添加到文档中
+          document.body.appendChild(tooltip);
+
+          // 200ms 后移除提示
+          setTimeout(() => {
+            document.body.removeChild(tooltip);
+          }, 200);
+        });
+      }
     },
     sortJson(order) {
       // 排序功能
@@ -128,6 +172,26 @@ export default {
     onSearchFocus() {
       // 搜索框获得焦点时的处理
     },
+    updateToolbarPosition() {
+      const editor = document.querySelector('.my-editor');
+      const content = document.querySelector('.content');
+      if (editor && content) {
+        const editorLeft = editor.getBoundingClientRect().left;
+        const toolbarContent = document.querySelector('.toolbar-content');
+        if (toolbarContent) {
+          toolbarContent.style.marginLeft = `${editorLeft}px`;
+          toolbarContent.style.marginRight = '0';
+        }
+      }
+    },
+    async handlePaste() {
+      try {
+        const text = await navigator.clipboard.readText();
+        this.inputText = text;
+      } catch (err) {
+        console.error('Failed to read clipboard:', err);
+      }
+    }
   },
   watch: {
     inputText: {
@@ -135,6 +199,7 @@ export default {
         try {
           if (!newValue) {
             this.content = { json: {} };
+            this.isExpanded = false;
             return;
           }
           const jsonObj = JSON.parse(newValue);
@@ -142,6 +207,7 @@ export default {
             json: jsonObj,
             text: undefined
           };
+          this.isExpanded = false;
         } catch (e) {
           // JSON 解析错误时不更新 content
           console.error('Invalid JSON:', e);
@@ -192,9 +258,8 @@ export default {
 /* 导航栏样式 */
 .navbar {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 20px 20px;
+  padding: 20px 40px;
   position: relative;
 }
 
@@ -202,9 +267,6 @@ export default {
   display: flex;
   align-items: center;
   z-index: 1;
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 
 .logo {
@@ -236,6 +298,8 @@ export default {
   background-color: rgba(255, 255, 255, 0.8);
   border-radius: 100px;
   white-space: nowrap;
+  width: fit-content;
+  margin: 10px 20px;
 }
 
 /* 搜索框样式 */
@@ -282,7 +346,7 @@ export default {
 .content {
   display: flex;
   flex: 1;
-  padding: 0px 20px 20px 20px;
+  padding: 0px 40px 40px 40px;
   gap: 20px;
   height: calc(100vh - 60px);
   overflow: hidden;
@@ -330,30 +394,41 @@ export default {
 }
 
 /* 修改 toolbar-content 中的图标样式 */
-.toolbar-content .mr-2 {
+.mr-2 {
   cursor: pointer;
-  padding: 2px;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
-.toolbar-content .mr-2:hover {
+.mr-2:hover {
   background-color: rgba(0, 0, 0, 0.05);
   transform: translateY(-1px);
 }
 
-.toolbar-content .mr-2:active {
+.mr-2:active {
   background-color: rgba(0, 0, 0, 0.1);
   transform: translateY(0px);
 }
 
 /* 修改图标颜色 */
-.toolbar-content svg {
+svg {
   color: #303030;
   transition: color 0.2s ease;
 }
 
-.toolbar-content .mr-2:hover svg {
+.mr-2:hover svg {
   color: #0a0a0a;
+}
+
+.copy-tooltip {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  transform: translateX(-50%);
+  /* 水平居中 */
 }
 </style>
