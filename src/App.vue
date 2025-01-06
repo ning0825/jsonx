@@ -11,12 +11,12 @@
     </nav>
 
     <div>
-      <div class="toolbar-paste" style="position: absolute; left: 10px;">
-        <PasteButton class="mr-2" @click="handlePaste" />
+      <div class="toolbar-paste" style="position: absolute;">
+        <PasteButton class="mr-2 mr-2-end" @click="handlePaste" />
       </div>
       <div class="toolbar-content">
         <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
-        <CopyIcon class="mr-2" @click="copyToClipboard" />
+        <CopyIcon class="mr-2 mr-2-end" @click="copyToClipboard" />
         <!-- <CompressIcon class="mr-2" @click="compressJson" />
       <EscapeIcon class="mr-2" />
       <UnescapeIcon class="mr-2" />
@@ -106,12 +106,15 @@ export default {
       }
     });
 
-    // 监听窗口大小变化，重新计算位置
-    window.addEventListener('resize', this.updateToolbarPosition);
+    // 添加 toolbar-paste 位置更新
+    this.$nextTick(() => {
+      this.updatePasteButtonPosition();
+      window.addEventListener('resize', this.updatePasteButtonPosition);
+    });
   },
   beforeUnmount() {
     // 移除事件监听
-    window.removeEventListener('resize', this.updateToolbarPosition);
+    window.removeEventListener('resize', this.updatePasteButtonPosition);
   },
   methods: {
     toggleExpand() {
@@ -190,6 +193,17 @@ export default {
         this.inputText = text;
       } catch (err) {
         console.error('Failed to read clipboard:', err);
+      }
+    },
+    updatePasteButtonPosition() {
+      const inputArea = document.querySelector('.input-area');
+      if (inputArea) {
+        const inputRight = inputArea.getBoundingClientRect().right;
+        const toolbarPaste = document.querySelector('.toolbar-paste');
+        if (toolbarPaste) {
+          const pasteWidth = toolbarPaste.offsetWidth;
+          toolbarPaste.style.left = `${inputRight - pasteWidth - 20}px`;
+        }
       }
     }
   },
@@ -294,11 +308,18 @@ export default {
 .toolbar-content {
   display: inline-flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 18px 24px 18px 22px;
   background-color: rgba(255, 255, 255, 0.8);
   border-radius: 100px;
   white-space: nowrap;
   width: fit-content;
+  margin: 10px 20px;
+}
+
+.toolbar-paste {
+  padding: 18px;
+  background-color: rgba(230, 250, 46, 0.8);
+  border-radius: 100px;
   margin: 10px 20px;
 }
 
@@ -326,7 +347,32 @@ export default {
 
 /* 按钮样式 */
 .mr-2 {
-  margin-right: 12px;
+  margin-right: 22px;
+}
+
+.mr-2-end {
+  margin-right: 0px;
+}
+
+/* 修改 toolbar-content 中的图标样式 */
+.mr-2 {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.mr-2:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.mr-2:active {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: translateY(0px);
+}
+
+.mr-2:hover svg {
+  color: #0a0a0a;
 }
 
 /* 其他样式 */
@@ -393,31 +439,10 @@ export default {
   background: #f5f5f5;
 }
 
-/* 修改 toolbar-content 中的图标样式 */
-.mr-2 {
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.mr-2:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
-}
-
-.mr-2:active {
-  background-color: rgba(0, 0, 0, 0.1);
-  transform: translateY(0px);
-}
-
 /* 修改图标颜色 */
 svg {
   color: #303030;
   transition: color 0.2s ease;
-}
-
-.mr-2:hover svg {
-  color: #0a0a0a;
 }
 
 .copy-tooltip {
