@@ -34,7 +34,10 @@
     <!-- 添加内容区域 -->
     <div class="content">
       <!-- 左侧输入框 -->
-      <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
+      <div class="input-container">
+        <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
+        <DeleteButton class="delete-button" @click="clearInput" />
+      </div>
       <!-- 编辑器 -->
       <div class="my-editor">
         <VueJSONEditor ref="jsonEditor" :content="content" :readOnly="readOnly" :mainMenuBar="false"
@@ -56,6 +59,7 @@ import VueJSONEditor from '@/components/VueJSONEditor.vue';
 import { Textarea } from "@/components/ui/textarea"
 import ExpandedIcon from '@/components/icons/ExpandedIcon.vue'
 import PasteButton from '@/components/icons/PasteButton.vue'
+import DeleteButton from '@/components/icons/DeleteButton.vue'
 
 export default {
   name: 'App',
@@ -71,6 +75,7 @@ export default {
     Textarea,
     ExpandedIcon,
     PasteButton,
+    DeleteButton,
   },
   data() {
     return {
@@ -205,6 +210,9 @@ export default {
           toolbarPaste.style.left = `${inputRight - pasteWidth - 20}px`;
         }
       }
+    },
+    clearInput() {
+      this.inputText = '';
     }
   },
   watch: {
@@ -410,6 +418,34 @@ export default {
   gap: 20px;
   height: calc(100vh - 60px);
   overflow: hidden;
+}
+
+.input-container {
+  position: relative;
+  width: 400px;
+  flex-shrink: 0;
+}
+
+.delete-button {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  color: #666;
+  fill: #666666bd;
+}
+
+.delete-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.delete-button:active {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .input-area {
