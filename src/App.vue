@@ -12,7 +12,7 @@
 
     <div>
       <div class="toolbar-paste" style="position: absolute;">
-        <PasteButton class="mr-2 mr-2-end" @click="handlePaste" />
+        <PasteButton @click="handlePaste" />
       </div>
       <div class="toolbar-content">
         <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
@@ -273,7 +273,7 @@ export default {
 .navbar {
   display: flex;
   align-items: center;
-  padding: 20px 40px;
+  padding: 20px 40px 0px 40px;
   position: relative;
 }
 
@@ -308,7 +308,7 @@ export default {
 .toolbar-content {
   display: inline-flex;
   align-items: center;
-  padding: 18px 24px 18px 22px;
+  padding: 8px 14px 8px 12px;
   background-color: rgba(255, 255, 255, 0.8);
   border-radius: 100px;
   white-space: nowrap;
@@ -317,10 +317,24 @@ export default {
 }
 
 .toolbar-paste {
-  padding: 18px;
+  padding: 8px;
   background-color: rgba(230, 250, 46, 0.8);
   border-radius: 100px;
   margin: 10px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolbar-paste:hover {
+  background-color: #000000a4;
+}
+
+.toolbar-paste:active {
+  background-color: #000;
+}
+
+.toolbar-paste:hover svg {
+  fill: rgb(255, 255, 255);
 }
 
 /* 搜索框样式 */
@@ -347,7 +361,7 @@ export default {
 
 /* 按钮样式 */
 .mr-2 {
-  margin-right: 22px;
+  margin-right: 8px;
 }
 
 .mr-2-end {
@@ -357,7 +371,7 @@ export default {
 /* 修改 toolbar-content 中的图标样式 */
 .mr-2 {
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 100px;
   transition: all 0.2s ease;
 }
 
@@ -443,6 +457,7 @@ export default {
 svg {
   color: #303030;
   transition: color 0.2s ease;
+  padding: 10px;
 }
 
 .copy-tooltip {
