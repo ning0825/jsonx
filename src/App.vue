@@ -16,11 +16,11 @@
       </div>
       <div class="toolbar-content">
         <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
-        <CopyIcon class="mr-2 mr-2-end" @click="copyToClipboard" />
+        <CopyIcon class="mr-2" @click="copyToClipboard" />
+        <SortAscIcon ref="sortIcon" class="mr-2  mr-2-end" @click="handleSort" />
         <!-- <CompressIcon class="mr-2" @click="compressJson" />
       <EscapeIcon class="mr-2" />
       <UnescapeIcon class="mr-2" />
-      <SortAscIcon class="mr-2" />
       <SortDescIcon class="mr-2" /> -->
         <!-- <div class="search-wrapper">
           <div class="search-container">
@@ -123,7 +123,6 @@ export default {
   },
   methods: {
     toggleExpand() {
-      this.isExpanded = !this.isExpanded;
       const editor = this.$refs.jsonEditor.editor;
       if (editor) {
         if (this.isExpanded) {
@@ -131,6 +130,7 @@ export default {
         } else {
           editor.expand([], () => true);
         }
+        this.isExpanded = !this.isExpanded;
       }
     },
     compressJson() {
@@ -169,7 +169,44 @@ export default {
       }
     },
     sortJson(order) {
-      // 排序功能
+      const editor = this.$refs.jsonEditor.editor;
+      if (editor) {
+        // 获取当前内容
+        const content = editor.get();
+        if (content.json) {
+          if (order === 'default') {
+            // 恢复默认排序
+            editor.set({
+              json: this.inputText ? JSON.parse(this.inputText) : {}
+            });
+          } else {
+            // 对内容进行排序
+            const sortedContent = {
+              json: this.sortObject(content.json, order)
+            };
+            // 设置排序后的内容
+            editor.set(sortedContent);
+          }
+        }
+      }
+    },
+    sortObject(obj, order) {
+      // 如果是数组，对每个元素递归排序
+      if (Array.isArray(obj)) {
+        return [...obj].map(item => this.sortObject(item, order));
+      }
+      // 如果是对象，对键进行排序
+      else if (obj && typeof obj === 'object') {
+        const sorted = {};
+        Object.keys(obj)
+          .sort((a, b) => order === 'asc' ? a.localeCompare(b) : b.localeCompare(a))
+          .forEach(key => {
+            sorted[key] = this.sortObject(obj[key], order);
+          });
+        return sorted;
+      }
+      // 其他类型直接返回
+      return obj;
     },
     jsToJson() {
       // JS对象转JSON功能
@@ -213,6 +250,23 @@ export default {
     },
     clearInput() {
       this.inputText = '';
+    },
+    handleSort() {
+      const sortType = this.$refs.sortIcon.currentSortType
+      switch (sortType) {
+        case 'asc':
+          // 执行升序排序
+          this.sortJson('asc')
+          break
+        case 'desc':
+          // 执行降序排序
+          this.sortJson('desc')
+          break
+        default:
+          // 恢复默认顺序
+          this.sortJson('default')
+          break
+      }
     }
   },
   watch: {
@@ -456,7 +510,7 @@ export default {
   font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.5;
-  background-color: rgba(250, 250, 250, 0.9);
+  background-color: rgba(250, 250, 250, 0.8);
 }
 
 /* 自定义滚动条样式 */
@@ -490,7 +544,7 @@ export default {
 }
 
 /* 修改图标颜色 */
-svg {
+>>>svg {
   color: #303030;
   transition: color 0.2s ease;
   padding: 10px;

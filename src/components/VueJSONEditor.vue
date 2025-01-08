@@ -169,7 +169,7 @@ export default {
 <style>
 .vue-jsoneditor {
     height: 100%;
-    background-color: rgba(250, 250, 250, 0.9);
+    background-color: rgba(250, 250, 250, 0.8);
 }
 
 .json-type {
