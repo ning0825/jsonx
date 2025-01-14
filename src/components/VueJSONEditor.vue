@@ -60,7 +60,8 @@ export default {
     data() {
         return {
             editor: null,
-            prevProps: {}
+            prevProps: {},
+            isActualSize: false
         }
     },
     mounted() {
@@ -145,12 +146,25 @@ export default {
                     if (!preview) {
                         preview = document.createElement('div');
                         preview.className = 'image-preview';
-                        preview.innerHTML = `<img src="${text}" alt="preview">`;
+                        const img = document.createElement('img');
+                        img.src = text;
+                        img.style.setProperty('--natural-width', `${wh.width}px`);
+                        img.style.setProperty('--natural-height', `${wh.height}px`);
+                        preview.appendChild(img);
                         imgInfo = document.createElement('div');
                         imgInfo.className = 'image-info';
-                        imgInfo.innerHTML = `<span>${wh.width} x ${wh.height}</span><span class="image-suffix">${imgSuf}</span>`;
+                        imgInfo.innerHTML = `
+                            <span>${wh.width} x ${wh.height}</span>
+                            <span class="image-suffix">${imgSuf}</span>
+                            <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
+                                ${this.isActualSize ? '匹配宽度' : '显示实际大小'}
+                            </button>
+                        `;
                         preview.appendChild(imgInfo);
                         content.appendChild(preview);
+
+                        // 将 Vue 实例方法绑定到 DOM 元素
+                        preview.__vue__ = this;
 
                         // 强制重绘
                         preview.offsetHeight;
@@ -164,7 +178,15 @@ export default {
                         const img = preview.querySelector('img');
                         img.src = text;
                         imgInfo = preview.querySelector('.image-info');
-                        imgInfo.innerHTML = `<span>${wh.width} x ${wh.height}</span><span class="image-suffix">${imgSuf}</span>`;
+                        imgInfo.innerHTML = `
+                            <span>${wh.width} x ${wh.height}</span>
+                            <span class="image-suffix">${imgSuf}</span>
+                            <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
+                                ${this.isActualSize ? '匹配宽度' : '显示实际大小'}
+                            </button>
+                        `;
+                        img.style.setProperty('--natural-width', `${wh.width}px`);
+                        img.style.setProperty('--natural-height', `${wh.height}px`);
                     }
                 }
             }
@@ -233,6 +255,21 @@ export default {
                 img.onerror = reject;
                 img.src = url;
             });
+        },
+
+        toggleSize() {
+            this.isActualSize = !this.isActualSize;
+            const preview = document.querySelector('.image-preview');
+            const img = preview.querySelector('img');
+            const btn = preview.querySelector('.size-toggle-btn');
+
+            if (this.isActualSize) {
+                img.classList.add('actual-size');
+                btn.textContent = '显示为匹配宽度';
+            } else {
+                img.classList.remove('actual-size');
+                btn.textContent = '显示为实际大小';
+            }
         }
     }
 }
@@ -288,9 +325,19 @@ export default {
 } */
 
 .image-preview img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: width .5s ease, height .5s ease;
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+.image-preview img.actual-size {
+    width: var(--natural-width, auto) !important;
+    height: var(--natural-height, auto) !important;
 }
 
 .image-info {
@@ -299,7 +346,7 @@ export default {
     left: 0;
     width: 100%;
     background-image: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
-    color: #fff;
+    color: #BDBDBDFF;
     padding: 8px;
     font-size: 12px;
 }
@@ -309,10 +356,29 @@ export default {
     border-radius: 100px;
     background-color: #49484e;
     padding: 0 6px;
-    color: #f8f8f8;
+    color: #CCCCCCFF;
     display: inline-flex;
     align-items: center;
     height: 16px;
     font-size: 11px;
+}
+
+.size-toggle-btn {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background-color: #49484e;
+    border: none;
+    color: #CCCCCCFF;
+    cursor: pointer;
+    font-size: 11px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.size-toggle-btn:hover {
+    background-color: #5a5962;
 }
 </style>
