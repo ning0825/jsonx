@@ -38,6 +38,7 @@
         <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
         <DeleteButton class="delete-button" @click="clearInput" />
       </div>
+      <div style="width: 20px;"></div>
       <!-- 编辑器 -->
       <div class="my-editor">
         <VueJSONEditor ref="jsonEditor" :content="content" :readOnly="readOnly" :mainMenuBar="false"
@@ -469,7 +470,7 @@ export default {
   display: flex;
   flex: 1;
   padding: 0px 40px 40px 40px;
-  gap: 20px;
+  /* gap: 20px; */
   height: calc(100vh - 60px);
   overflow: hidden;
 }
