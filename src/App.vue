@@ -296,6 +296,17 @@ export default {
 }
 </script>
 
+<style>
+/* 将这些样式放在一个不带 scoped 的 style 标签中 */
+.toolbar-content svg,
+.toolbar-paste svg,
+.input-container svg {
+  color: #303030;
+  transition: color 0.2s ease;
+  padding: 10px;
+}
+</style>
+
 <style scoped>
 /* https://github.com/josdejong/svelte-jsoneditor/blob/main/src/lib/themes/defaults.scss */
 .my-editor {
@@ -542,13 +553,6 @@ export default {
 .input-area::-webkit-scrollbar-corner,
 .my-editor::-webkit-scrollbar-corner {
   background: #f5f5f5;
-}
-
-/* 修改图标颜色 */
->>>svg {
-  color: #303030;
-  transition: color 0.2s ease;
-  padding: 10px;
 }
 
 .copy-tooltip {
