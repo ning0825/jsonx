@@ -133,15 +133,75 @@ export default {
         }
     },
     methods: {
+        isImageUrl(url) {
+            // 检查是否是图片文件扩展名
+            if (url.match(/\.(jpg|jpeg|png|gif|webp|avif)$/i)) {
+                return true;
+            }
+
+            try {
+                const urlObj = new URL(url);
+
+                // 检查查询参数中的图片相关标识
+                const params = urlObj.searchParams;
+                if (params.has('format') || params.has('auto')) {
+                    return true;
+                }
+
+                // 检查路径中的图片相关标识
+                const pathIndicators = [
+                    '/images/',
+                    '/image/',
+                    '/img/',
+                    '/photos/',
+                    '/assets/'
+                ];
+
+                return pathIndicators.some(indicator =>
+                    urlObj.pathname.toLowerCase().includes(indicator)
+                );
+            } catch {
+                return false;
+            }
+        },
+
+        getImageFormat(url) {
+            // 先尝试从URL路径中获取格式
+            const extensionMatch = url.match(/\.([a-zA-Z]+)(?:\?|$)/);
+            if (extensionMatch) {
+                return extensionMatch[1].toUpperCase();
+            }
+
+            // 再尝试从查询参数中获取格式
+            try {
+                const urlObj = new URL(url);
+                const format = urlObj.searchParams.get('format');
+                if (format) {
+                    return format.toUpperCase();
+                }
+
+                // 检查auto参数
+                const auto = urlObj.searchParams.get('auto');
+                if (auto) {
+                    return auto.toUpperCase();
+                }
+            } catch (e) {
+                console.error('URL parsing failed:', e);
+            }
+
+            return 'IMG'; // 默认返回通用格式标识
+        },
+
         async handleMouseOver(event) {
             const target = event.target.closest('.jse-value');
             if (target) {
                 const text = target.textContent.trim();
-                if (text.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                if (this.isImageUrl(text)) {
                     var wh = await this.getImageSize(text);
                     let preview = document.querySelector('.image-preview');
                     let imgInfo = document.querySelector('.image-info');
-                    let imgSuf = text.split('.').pop().toUpperCase();
+                    // 使用新的格式获取方法
+                    let imgSuf = this.getImageFormat(text);
                     const content = document.querySelector('.content');
 
                     if (!preview) {
