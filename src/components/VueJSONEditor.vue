@@ -61,7 +61,8 @@ export default {
         return {
             editor: null,
             prevProps: {},
-            isActualSize: false
+            isActualSize: false,
+            isFullscreen: false
         }
     },
     mounted() {
@@ -154,17 +155,29 @@ export default {
                         imgInfo = document.createElement('div');
                         imgInfo.className = 'image-info';
                         imgInfo.innerHTML = `
-                            <span>${wh.width} x ${wh.height}</span>
-                            <span class="image-suffix">${imgSuf}</span>
-                            <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
-                                ${this.isActualSize ? '匹配宽度' : '显示实际大小'}
-                            </button>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center;">
+                                    <span>${wh.width} x ${wh.height}</span>
+                                    <span class="image-suffix">${imgSuf}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
+                                        ${this.isActualSize ? '显示为匹配空间' : '显示为实际大小'}
+                                    </button>
+                                    <button class="size-toggle-btn fullscreen-btn" onclick="this.closest('.image-preview').__vue__?.toggleFullscreen()">
+                                        全屏查看
+                                    </button>
+                                </div>
+                            </div>
                         `;
                         preview.appendChild(imgInfo);
                         content.appendChild(preview);
 
-                        // 将 Vue 实例方法绑定到 DOM 元素
-                        preview.__vue__ = this;
+                        // 将所有需要的方法绑定到 preview.__vue__ 上
+                        preview.__vue__ = {
+                            toggleSize: this.toggleSize.bind(this),
+                            toggleFullscreen: this.toggleFullscreen.bind(this)
+                        };
 
                         // 强制重绘
                         preview.offsetHeight;
@@ -179,11 +192,20 @@ export default {
                         img.src = text;
                         imgInfo = preview.querySelector('.image-info');
                         imgInfo.innerHTML = `
-                            <span>${wh.width} x ${wh.height}</span>
-                            <span class="image-suffix">${imgSuf}</span>
-                            <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
-                                ${this.isActualSize ? '匹配宽度' : '显示实际大小'}
-                            </button>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center;">
+                                    <span>${wh.width} x ${wh.height}</span>
+                                    <span class="image-suffix">${imgSuf}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button class="size-toggle-btn" onclick="this.closest('.image-preview').__vue__?.toggleSize()">
+                                        ${this.isActualSize ? '显示为匹配空间' : '显示为实际大小'}
+                                    </button>
+                                    <button class="size-toggle-btn fullscreen-btn" onclick="this.closest('.image-preview').__vue__?.toggleFullscreen()">
+                                        全屏查看
+                                    </button>
+                                </div>
+                            </div>
                         `;
                         img.style.setProperty('--natural-width', `${wh.width}px`);
                         img.style.setProperty('--natural-height', `${wh.height}px`);
@@ -265,10 +287,24 @@ export default {
 
             if (this.isActualSize) {
                 img.classList.add('actual-size');
-                btn.textContent = '显示为匹配宽度';
+                btn.textContent = '显示为匹配空间';
             } else {
                 img.classList.remove('actual-size');
                 btn.textContent = '显示为实际大小';
+            }
+        },
+
+        toggleFullscreen() {
+            this.isFullscreen = !this.isFullscreen;
+            const preview = document.querySelector('.image-preview');
+            const btn = preview.querySelector('.fullscreen-btn');
+
+            if (this.isFullscreen) {
+                preview.classList.add('fullscreen');
+                btn.textContent = '退出全屏';
+            } else {
+                preview.classList.remove('fullscreen');
+                btn.textContent = '全屏查看';
             }
         }
     }
@@ -309,11 +345,15 @@ export default {
     overflow: hidden;
     z-index: 1000;
     transform: translateX(100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, width 0.3s ease;
 }
 
 .image-preview.show {
     transform: translateX(0);
+}
+
+.image-preview.fullscreen {
+    width: 100vw;
 }
 
 .content {
@@ -347,7 +387,7 @@ export default {
     width: 100%;
     background-image: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
     color: #BDBDBDFF;
-    padding: 8px;
+    padding: 8px 16px;
     font-size: 12px;
 }
 
