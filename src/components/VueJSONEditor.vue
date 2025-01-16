@@ -62,7 +62,8 @@ export default {
             editor: null,
             prevProps: {},
             isActualSize: false,
-            isFullscreen: false
+            isFullscreen: false,
+            preImgUrl: '',
         }
     },
     mounted() {
@@ -197,7 +198,7 @@ export default {
             if (target) {
                 const text = target.textContent.trim();
                 if (this.isImageUrl(text)) {
-                    var wh = await this.getImageSize(text);
+                    this.preImgUrl = text;
                     let preview = document.querySelector('.image-preview');
                     let imgInfo = document.querySelector('.image-info');
                     // 使用新的格式获取方法
@@ -205,6 +206,7 @@ export default {
                     const content = document.querySelector('.content');
 
                     if (!preview) {
+                        var wh = await this.getImageSize(text);
                         preview = document.createElement('div');
                         preview.className = 'image-preview';
                         const img = document.createElement('img');
@@ -246,8 +248,10 @@ export default {
                         requestAnimationFrame(() => {
                             preview.classList.add('show');
                             content.classList.add('with-preview');
+                            this.toggleSize();
                         });
-                    } else {
+                    } else if (preview && this.preImgUrl != text) {
+                        var wh = await this.getImageSize(text);
                         const img = preview.querySelector('img');
                         img.src = text;
                         imgInfo = preview.querySelector('.image-info');
@@ -344,13 +348,37 @@ export default {
             const preview = document.querySelector('.image-preview');
             const img = preview.querySelector('img');
             const btn = preview.querySelector('.size-toggle-btn');
+            btn.textContent = this.isActualSize ? '显示为匹配空间' : '显示为实际大小';
 
             if (this.isActualSize) {
-                img.classList.add('actual-size');
-                btn.textContent = '显示为匹配空间';
+                // 获取图片的自然尺寸
+                const naturalWidth = img.naturalWidth;
+                const naturalHeight = img.naturalHeight;
+
+                // 设置具体的高度值而不是 auto
+                img.style.width = `${naturalWidth}px`;
+                img.style.height = `${naturalHeight}px`;
             } else {
-                img.classList.remove('actual-size');
-                btn.textContent = '显示为实际大小';
+                // 获取容器尺寸
+                const container = preview;
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+
+                // 计算适应容器的尺寸，保持宽高比
+                const imgRatio = img.naturalWidth / img.naturalHeight;
+                const containerRatio = containerWidth / containerHeight;
+
+                let width, height;
+                if (imgRatio > containerRatio) {
+                    width = containerWidth;
+                    height = containerWidth / imgRatio;
+                } else {
+                    height = containerHeight;
+                    width = containerHeight * imgRatio;
+                }
+
+                img.style.width = `${width}px`;
+                img.style.height = `${height}px`;
             }
         },
 
@@ -429,15 +457,8 @@ export default {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    transition: width .5s ease, height .5s ease;
-    width: 100%;
-    height: 100%;
+    transition: width 0.5s ease, height 0.5s ease;
     object-fit: contain;
-}
-
-.image-preview img.actual-size {
-    width: var(--natural-width, auto) !important;
-    height: var(--natural-height, auto) !important;
 }
 
 .image-info {

@@ -18,8 +18,8 @@
         <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
         <CopyIcon class="mr-2" @click="copyToClipboard" />
         <SortAscIcon ref="sortIcon" class="mr-2  mr-2-end" @click="handleSort" />
-        <!-- <CompressIcon class="mr-2" @click="compressJson" />
-      <EscapeIcon class="mr-2" />
+        <CompressIcon class="mr-2" @click="compressJson" />
+        <!-- <EscapeIcon class="mr-2" />
       <UnescapeIcon class="mr-2" />
       <SortDescIcon class="mr-2" /> -->
         <!-- <div class="search-wrapper">
@@ -41,8 +41,11 @@
       <div style="width: 20px;"></div>
       <!-- 编辑器 -->
       <div class="my-editor">
-        <VueJSONEditor ref="jsonEditor" :content="content" :readOnly="readOnly" :mainMenuBar="false"
-          :navigationBar="false" />
+        <VueJSONEditor v-show="!isCompressed" ref="jsonEditor" :content="content" :readOnly="readOnly"
+          :mainMenuBar="false" :navigationBar="false" />
+        <div v-show="isCompressed" class="compressed-json">
+          {{ compressedContent }}
+        </div>
       </div>
     </div>
   </div>
@@ -93,6 +96,8 @@ export default {
       },
       inputText: '',
       isExpanded: false,
+      isCompressed: false,
+      compressedContent: '',
     }
   },
   mounted() {
@@ -135,6 +140,20 @@ export default {
       }
     },
     compressJson() {
+      const editor = this.$refs.jsonEditor.editor;
+      if (editor) {
+        const content = editor.get();
+        if (content.json) {
+          if (this.isCompressed) {
+            // 如果当前是压缩状态，切换回正常显示
+            this.isCompressed = false;
+          } else {
+            // 压缩 JSON
+            this.compressedContent = JSON.stringify(content.json);
+            this.isCompressed = true;
+          }
+        }
+      }
     },
     escapeJson() {
       // 转义功能
@@ -304,6 +323,17 @@ export default {
   color: #303030;
   transition: color 0.2s ease;
   padding: 10px;
+}
+
+/* 添加透明图片的棋盘格背景 */
+.image-preview img {
+  background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-color: #ffffff;
 }
 </style>
 
@@ -565,5 +595,40 @@ export default {
   z-index: 1000;
   transform: translateX(-50%);
   /* 水平居中 */
+}
+
+.compressed-json {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  background-color: rgba(250, 250, 250, 0.8);
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+}
+
+/* 确保压缩内容的滚动条样式与编辑器一致 */
+.compressed-json::-webkit-scrollbar {
+  width: 6px;
+}
+
+.compressed-json::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.compressed-json::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 3px;
+}
+
+.compressed-json::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+}
+
+.compressed-json::-webkit-scrollbar-corner {
+  background: #f5f5f5;
 }
 </style>
