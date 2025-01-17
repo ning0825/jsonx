@@ -17,8 +17,9 @@
       <div class="toolbar-content">
         <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
         <CopyIcon class="mr-2" @click="copyToClipboard" />
-        <SortAscIcon ref="sortIcon" class="mr-2  mr-2-end" @click="handleSort" />
+        <SortAscIcon ref="sortIcon" class="mr-2" @click="handleSort" />
         <CompressIcon class="mr-2" @click="compressJson" />
+        <ConfigIcon class="mr-2" title="Config" @click="openConfig" />
         <!-- <EscapeIcon class="mr-2" />
       <UnescapeIcon class="mr-2" />
       <SortDescIcon class="mr-2" /> -->
@@ -42,10 +43,31 @@
       <!-- 编辑器 -->
       <div class="my-editor">
         <VueJSONEditor v-show="!isCompressed" ref="jsonEditor" :content="content" :readOnly="readOnly"
-          :mainMenuBar="false" :navigationBar="false" />
+          :mainMenuBar="false" :navigationBar="false" :baseImageUrl="baseImageUrl" @openConfig="openConfig" />
         <div v-show="isCompressed" class="compressed-json">
           {{ compressedContent }}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加设置面板 -->
+  <div class="config-panel" :class="{ show: isConfigOpen }">
+    <div class="config-content">
+      <div class="config-item">
+        <label class="config-label">图片 Base URL</label>
+        <div class="input-with-button">
+          <input type="text" class="config-input" v-model="baseImageUrl" placeholder="请输入图片 Base URL">
+          <button class="save-btn" @click="saveBaseUrl">
+            保存
+          </button>
+        </div>
+      </div>
+      <div class="config-item">
+        <label class="config-label">代码主题</label>
+        <button class="theme-toggle-btn" @click="toggleTheme">
+          切换主题
+        </button>
       </div>
     </div>
   </div>
@@ -64,6 +86,7 @@ import { Textarea } from "@/components/ui/textarea"
 import ExpandedIcon from '@/components/icons/ExpandedIcon.vue'
 import PasteButton from '@/components/icons/PasteButton.vue'
 import DeleteButton from '@/components/icons/DeleteButton.vue'
+import ConfigIcon from '@/components/icons/ConfigIcon.vue'
 
 export default {
   name: 'App',
@@ -80,6 +103,7 @@ export default {
     ExpandedIcon,
     PasteButton,
     DeleteButton,
+    ConfigIcon,
   },
   data() {
     return {
@@ -98,6 +122,8 @@ export default {
       isExpanded: false,
       isCompressed: false,
       compressedContent: '',
+      isConfigOpen: false,
+      baseImageUrl: '',
     }
   },
   mounted() {
@@ -122,10 +148,14 @@ export default {
       this.updatePasteButtonPosition();
       window.addEventListener('resize', this.updatePasteButtonPosition);
     });
+
+    // 添加点击事件监听
+    document.addEventListener('click', this.handleOutsideClick);
   },
   beforeUnmount() {
     // 移除事件监听
     window.removeEventListener('resize', this.updatePasteButtonPosition);
+    document.removeEventListener('click', this.handleOutsideClick);
   },
   methods: {
     toggleExpand() {
@@ -287,6 +317,40 @@ export default {
           this.sortJson('default')
           break
       }
+    },
+    openConfig(event) {
+      // 移除事件参数的检查，因为可能从不同地方调用
+      this.isConfigOpen = true;
+    },
+    toggleTheme() {
+      // 暂时不实现切换主题的逻辑
+      console.log('Toggle theme clicked');
+    },
+    handleOutsideClick(event) {
+      // 如果配置面板已打开，且点击的不是配置面板内部和配置按钮
+      if (this.isConfigOpen &&
+        !event.target.closest('.config-panel') &&
+        !event.target.closest('.mr-2[title="Config"]')) {
+        this.isConfigOpen = false;
+      }
+    },
+    saveBaseUrl() {
+      // 这里可以添加保存成功的提示
+      const tooltip = document.createElement('div');
+      tooltip.textContent = '保存成功';
+      tooltip.className = 'save-tooltip';
+
+      const button = document.querySelector('.save-btn');
+      const rect = button.getBoundingClientRect();
+      tooltip.style.position = 'fixed';
+      tooltip.style.left = `${rect.left}px`;
+      tooltip.style.top = `${rect.top - 30}px`;
+
+      document.body.appendChild(tooltip);
+
+      setTimeout(() => {
+        document.body.removeChild(tooltip);
+      }, 2000);
     }
   },
   watch: {
@@ -630,5 +694,131 @@ export default {
 
 .compressed-json::-webkit-scrollbar-corner {
   background: #f5f5f5;
+}
+
+.config-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 400px;
+  background: rgba(250, 250, 250, 0.8);
+  overflow: hidden;
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.config-panel.show {
+  transform: translateX(0);
+}
+
+.config-content {
+  padding: 20px;
+}
+
+.config-item {
+  margin-bottom: 20px;
+}
+
+.config-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.config-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: #666;
+}
+
+.theme-toggle-btn {
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-toggle-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.theme-toggle-btn:active {
+  background-color: #d0d0d0;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.config-input {
+  flex: 1;
+  /* 让输入框占据剩余空间 */
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.save-btn {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.save-btn:hover {
+  background-color: #45a049;
+}
+
+.save-btn:active {
+  background-color: #3d8b40;
+}
+
+.save-tooltip {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

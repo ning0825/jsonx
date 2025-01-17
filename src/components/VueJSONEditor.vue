@@ -51,12 +51,13 @@ import { createJSONEditor, ColorPicker } from 'vanilla-jsoneditor';
 
 export default {
     name: 'VueJSONEditor',
-    props: [
-        'content',
-        'readOnly',
-        'mainMenuBar',
-        'navigationBar',
-    ],
+    props: {
+        content: Object,
+        readOnly: Boolean,
+        mainMenuBar: Boolean,
+        navigationBar: Boolean,
+        baseImageUrl: String,
+    },
     data() {
         return {
             editor: null,
@@ -193,24 +194,71 @@ export default {
             return 'IMG'; // 默认返回通用格式标识
         },
 
+        getFullImageUrl(url) {
+            // 如果 url 已经是完整的 URL（以 http:// 或 https:// 开头），则直接返回
+            if (url.match(/^https?:\/\//)) {
+                return url;
+            }
+
+            // 如果设置了 baseUrl，则拼接
+            if (this.baseImageUrl) {
+                const baseUrl = this.baseImageUrl.endsWith('/') ? this.baseImageUrl : `${this.baseImageUrl}/`;
+                const imageUrl = url.startsWith('/') ? url.slice(1) : url;
+                return baseUrl + imageUrl;
+            }
+
+            return url;
+        },
+
+        needsBaseUrl(url) {
+            // 检查是否是完整URL
+            return !url.match(/^https?:\/\//) && !this.baseImageUrl;
+        },
+
         async handleMouseOver(event) {
             const target = event.target.closest('.jse-value');
             if (target) {
                 const text = target.textContent.trim();
                 if (this.isImageUrl(text)) {
+                    // 检查是否需要 baseUrl
+                    if (this.needsBaseUrl(text)) {
+                        // 创建提示元素
+                        const tooltip = document.createElement('div');
+                        tooltip.textContent = '请设置 Base URL';
+                        tooltip.className = 'base-url-tooltip';
+
+                        // 设置提示位置
+                        const rect = target.getBoundingClientRect();
+                        tooltip.style.position = 'fixed';
+                        tooltip.style.left = `${rect.right + 10}px`;
+                        tooltip.style.top = `${rect.top}px`;
+
+                        // 添加到文档中
+                        document.body.appendChild(tooltip);
+
+                        // 触发打开配置面板的事件
+                        this.$emit('openConfig');
+
+                        // 200ms 后移除提示
+                        setTimeout(() => {
+                            document.body.removeChild(tooltip);
+                        }, 2000);
+
+                        return; // 不显示预览
+                    }
+
                     this.preImgUrl = text;
                     let preview = document.querySelector('.image-preview');
                     let imgInfo = document.querySelector('.image-info');
-                    // 使用新的格式获取方法
                     let imgSuf = this.getImageFormat(text);
                     const content = document.querySelector('.content');
 
                     if (!preview) {
-                        var wh = await this.getImageSize(text);
+                        var wh = await this.getImageSize(this.getFullImageUrl(text));
                         preview = document.createElement('div');
                         preview.className = 'image-preview';
                         const img = document.createElement('img');
-                        img.src = text;
+                        img.src = this.getFullImageUrl(text);
                         img.style.setProperty('--natural-width', `${wh.width}px`);
                         img.style.setProperty('--natural-height', `${wh.height}px`);
                         preview.appendChild(img);
@@ -251,9 +299,9 @@ export default {
                             this.toggleSize();
                         });
                     } else if (preview && this.preImgUrl != text) {
-                        var wh = await this.getImageSize(text);
+                        var wh = await this.getImageSize(this.getFullImageUrl(text));
                         const img = preview.querySelector('img');
-                        img.src = text;
+                        img.src = this.getFullImageUrl(text);
                         imgInfo = preview.querySelector('.image-info');
                         imgInfo.innerHTML = `
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -501,5 +549,28 @@ export default {
 
 .size-toggle-btn:hover {
     background-color: #5a5962;
+}
+
+.base-url-tooltip {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>
