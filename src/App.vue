@@ -1,113 +1,237 @@
 <template>
-  <div class="app">
-    <!-- 导航栏 -->
-    <nav class="navbar">
-      <div class="nav-left">
-        <img src="./assets/logo.png" alt="Logo" class="logo">
-        <div class="title-container">
-          <div class="title">JsonX</div>
-        </div>
-      </div>
-    </nav>
-
-    <div>
-      <div class="toolbar-paste" style="position: absolute;">
-        <PasteButton @click="handlePaste" />
-      </div>
-      <div class="toolbar-content">
-        <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="toggleExpand" />
-        <CopyIcon class="mr-2" @click="copyToClipboard" />
-        <SortAscIcon ref="sortIcon" class="mr-2" @click="handleSort" />
-        <CompressIcon class="mr-2" @click="compressJson" />
-        <ConfigIcon class="mr-2" title="Config" @click="openConfig" />
-        <!-- <EscapeIcon class="mr-2" />
-      <UnescapeIcon class="mr-2" />
-      <SortDescIcon class="mr-2" /> -->
-        <!-- <div class="search-wrapper">
-          <div class="search-container">
-            <input type="text" class="search-input" v-model="searchText" placeholder="Search..." @input="searchContent"
-              @focus="onSearchFocus">
-          </div>
-        </div> -->
+  <GlassTheme
+    :inputText="inputText"
+    @handlePaste="handlePaste"
+    @openConfig="openConfig"
+    @toggleExpand="toggleExpand"
+    @clearInput="clearInput"
+    @update:inputText="updateInputText"
+    @compressJson="compressJson"
+    @copyToClipboard="copyToClipboard"
+    @handleSort="handleSort"
+  >
+    <div class="my-editor">
+      <JSONEditor
+        v-show="!isCompressed"
+        ref="jsonEditor"
+        :content="content.json"
+        :mode="'tree'"
+        :readOnly="true"
+        :baseImageUrl="baseImageUrl"
+        :expanded="isExpanded"
+        @resetSort="resetSort"
+      />
+      <div v-show="isCompressed" class="compressed-json">
+        {{ compressedContent }}
       </div>
     </div>
-
-    <!-- 添加内容区域 -->
-    <div class="content">
-      <!-- 左侧输入框 -->
-      <div class="input-container">
-        <Textarea class="input-area" placeholder="在此输入 JSON" v-model="inputText" />
-        <DeleteButton class="delete-button" @click="clearInput" />
-      </div>
-      <div style="width: 20px;"></div>
-      <!-- 编辑器 -->
-      <div class="my-editor">
-        <VueJSONEditor v-show="!isCompressed" ref="jsonEditor" :content="content" :readOnly="readOnly"
-          :mainMenuBar="false" :navigationBar="false" :baseImageUrl="baseImageUrl" @openConfig="openConfig" />
-        <div v-show="isCompressed" class="compressed-json">
-          {{ compressedContent }}
-        </div>
-      </div>
-    </div>
-  </div>
-
+  </GlassTheme>
   <!-- 添加设置面板 -->
   <div class="config-panel" :class="{ show: isConfigOpen }">
     <div class="config-content">
       <div class="config-item">
         <label class="config-label">图片 Base URL</label>
         <div class="input-with-button">
-          <input type="text" class="config-input" v-model="baseImageUrl" placeholder="请输入图片 Base URL">
-          <button class="save-btn" @click="saveBaseUrl">
-            保存
-          </button>
+          <input
+            type="text"
+            class="config-input"
+            v-model="baseImageUrl"
+            placeholder="请输入图片 Base URL"
+          />
+          <button class="save-btn" @click="saveBaseUrl">保存</button>
+        </div>
+      </div>
+      <div class="config-item">
+        <label class="config-label"> 编辑器字体大小: {{ fontSize }}px </label>
+        <div class="font-size-control">
+          <input
+            type="range"
+            class="size-slider"
+            v-model="fontSize"
+            min="12"
+            max="60"
+            step="1"
+          />
+          <input
+            type="number"
+            class="size-input"
+            v-model="fontSize"
+            min="12"
+            max="60"
+          />
         </div>
       </div>
       <div class="config-item">
         <label class="config-label">代码主题</label>
-        <button class="theme-toggle-btn" @click="toggleTheme">
-          切换主题
-        </button>
+        <button class="theme-toggle-btn" @click="toggleTheme">切换主题</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { Button } from '@/components/ui/button'
-import CompressIcon from '@/components/icons/CompressIcon.vue'
-import EscapeIcon from '@/components/icons/EscapeIcon.vue'
-import UnescapeIcon from '@/components/icons/UnescapeIcon.vue'
-import CopyIcon from '@/components/icons/CopyIcon.vue'
-import SortAscIcon from '@/components/icons/SortAscIcon.vue'
-import SortDescIcon from '@/components/icons/SortDescIcon.vue'
-import VueJSONEditor from '@/components/VueJSONEditor.vue';
-import { Textarea } from "@/components/ui/textarea"
-import ExpandedIcon from '@/components/icons/ExpandedIcon.vue'
-import PasteButton from '@/components/icons/PasteButton.vue'
-import DeleteButton from '@/components/icons/DeleteButton.vue'
-import ConfigIcon from '@/components/icons/ConfigIcon.vue'
+<script setup>
+import { ref, watch, onMounted } from "vue";
+import GlassTheme from "@/components/themes/GlassTheme.vue";
+import JSONEditor from "@/components/JSONEditor.vue";
+
+var inputText = ref("");
+var content = ref({
+  json: {},
+  text: undefined,
+});
+var isConfigOpen = ref(false);
+var baseImageUrl = ref("");
+var fontSize = ref(14);
+var isExpanded = ref(false);
+var isCompressed = ref(false);
+var compressedContent = ref("");
+var jsonEditor = ref(null);
+var originalJson = ref(null);
+
+onMounted(() => {
+  // 添加点击事件监听
+  document.addEventListener("click", handleOutsideClick);
+});
+
+watch(
+  () => inputText.value,
+  (newVal) => {
+    try {
+      if (!newVal) {
+        content.value.json = {};
+        originalJson.value = {}; // 重置原始数据
+        isExpanded.value = false;
+        return;
+      }
+      const jsonObj = JSON.parse(newVal);
+      content.value.json = jsonObj;
+      originalJson.value = JSON.parse(JSON.stringify(jsonObj)); // 保存原始数据
+      isExpanded.value = false;
+    } catch (e) {
+      console.error("Invalid JSON:", e);
+    }
+  }
+);
+
+async function handlePaste() {
+  try {
+    const text = await navigator.clipboard.readText();
+    inputText.value = text;
+  } catch (err) {
+    console.error("Failed to read clipboard:", err);
+  }
+}
+
+function handleOutsideClick(event) {
+  // 如果配置面板已打开，且点击的不是配置面板内部和配置按钮
+  if (
+    isConfigOpen.value &&
+    !event.target.closest(".config-panel") &&
+    !event.target.closest('.mr-2[title="Config"]')
+  ) {
+    isConfigOpen.value = false;
+  }
+}
+
+function openConfig() {
+  isConfigOpen.value = !isConfigOpen.value;
+}
+
+function toggleExpand() {
+  isExpanded.value = !isExpanded.value;
+}
+
+function saveBaseUrl() {
+  // 这里可以添加保存成功的提示
+  const tooltip = document.createElement("div");
+  tooltip.textContent = "保存成功";
+  tooltip.className = "save-tooltip";
+
+  const button = document.querySelector(".save-btn");
+  const rect = button.getBoundingClientRect();
+  tooltip.style.position = "fixed";
+  tooltip.style.left = `${rect.left}px`;
+  tooltip.style.top = `${rect.top - 30}px`;
+
+  document.body.appendChild(tooltip);
+
+  setTimeout(() => {
+    document.body.removeChild(tooltip);
+  }, 2000);
+}
+
+function clearInput() {
+  inputText.value = "";
+}
+
+function updateInputText(newVal) {
+  inputText.value = newVal;
+}
+
+function compressJson() {
+  if (isCompressed.value) {
+    isCompressed.value = false;
+  } else {
+    compressedContent.value = JSON.stringify(content.value.json);
+    isCompressed.value = true;
+  }
+}
+
+function copyToClipboard() {
+  const result = JSON.stringify(content.value.json, null, 2);
+  navigator.clipboard.writeText(result).then(() => {
+    const button = document.querySelector(
+      ".toolbar-content .mr-2:nth-child(2)"
+    );
+    const tooltip = document.createElement("div");
+    tooltip.textContent = "copied!";
+    tooltip.className = "copy-tooltip";
+
+    const rect = button.getBoundingClientRect();
+    tooltip.style.position = "fixed";
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.top - 25}px`;
+
+    document.body.appendChild(tooltip);
+
+    setTimeout(() => {
+      document.body.removeChild(tooltip);
+    }, 200);
+  });
+}
+
+function handleSort() {
+  const editor = jsonEditor.value;
+  if (editor) {
+    editor.handleSort();
+    // 更新排序图标
+    // const order = editor.sortOrder;
+    // const icon = this.$refs.sortIcon;
+    // if (icon) {
+    //   icon.updateIcon(order);
+    // }
+  }
+}
+
+function resetSort() {
+  if (originalJson.value) {
+    content.value.json = JSON.parse(JSON.stringify(originalJson.value));
+  }
+}
+</script>
+
+<!-- <script>
+import GlassTheme from '@/components/themes/GlassTheme.vue'
+import JSONEditor from '@/components/JSONEditor.vue'
 
 export default {
   name: 'App',
   components: {
-    Button,
-    CompressIcon,
-    EscapeIcon,
-    UnescapeIcon,
-    CopyIcon,
-    SortAscIcon,
-    SortDescIcon,
-    VueJSONEditor,
-    Textarea,
-    ExpandedIcon,
-    PasteButton,
-    DeleteButton,
-    ConfigIcon,
+    GlassTheme,
+    JSONEditor,
   },
   data() {
     return {
-      searchText: '',
       readOnly: true,
       content: {
         json: {
@@ -124,33 +248,18 @@ export default {
       compressedContent: '',
       isConfigOpen: false,
       baseImageUrl: '',
+      isDarkTheme: false,
+      originalJson: null,
+      fontSize: 14,
     }
   },
   mounted() {
-    // 等待 DOM 更新完成
-    this.$nextTick(() => {
-      // 获取 my-editor 的位置
-      const editor = document.querySelector('.my-editor');
-      const content = document.querySelector('.content');
-      if (editor && content) {
-        const editorLeft = editor.getBoundingClientRect().left;
-        const toolbarContent = document.querySelector('.toolbar-content');
-        if (toolbarContent) {
-          // 设置 toolbar-content 的左边距
-          toolbarContent.style.marginLeft = `${editorLeft}px`;
-          toolbarContent.style.marginRight = '0';
-        }
-      }
-    });
 
-    // 添加 toolbar-paste 位置更新
-    this.$nextTick(() => {
-      this.updatePasteButtonPosition();
-      window.addEventListener('resize', this.updatePasteButtonPosition);
-    });
-
-    // 添加点击事件监听
-    document.addEventListener('click', this.handleOutsideClick);
+    // 从本地存储加载字体大小
+    const savedFontSize = localStorage.getItem('editor-font-size')
+    if (savedFontSize) {
+      this.fontSize = parseInt(savedFontSize)
+    }
   },
   beforeUnmount() {
     // 移除事件监听
@@ -159,65 +268,19 @@ export default {
   },
   methods: {
     toggleExpand() {
-      const editor = this.$refs.jsonEditor.editor;
+      const editor = this.$refs.jsonEditor
       if (editor) {
-        if (this.isExpanded) {
-          editor.collapse([], false);
-        } else {
-          editor.expand([], () => true);
-        }
-        this.isExpanded = !this.isExpanded;
+        editor.toggleExpand()
       }
     },
-    compressJson() {
-      const editor = this.$refs.jsonEditor.editor;
-      if (editor) {
-        const content = editor.get();
-        if (content.json) {
-          if (this.isCompressed) {
-            // 如果当前是压缩状态，切换回正常显示
-            this.isCompressed = false;
-          } else {
-            // 压缩 JSON
-            this.compressedContent = JSON.stringify(content.json);
-            this.isCompressed = true;
-          }
-        }
-      }
-    },
+
     escapeJson() {
       // 转义功能
     },
     unescapeJson() {
       // 去除转义功能
     },
-    copyToClipboard() {
-      const editor = this.$refs.jsonEditor.editor;
-      if (editor) {
-        const content = JSON.stringify(this.content.json, null, 2);
-        navigator.clipboard.writeText(content).then(() => {
-          // 创建提示元素
-          const button = document.querySelector('.toolbar-content .mr-2:nth-child(2)'); // CopyIcon 按钮
-          const tooltip = document.createElement('div');
-          tooltip.textContent = 'copied!';
-          tooltip.className = 'copy-tooltip';
 
-          // 设置提示元素的位置
-          const rect = button.getBoundingClientRect();
-          tooltip.style.position = 'fixed';
-          tooltip.style.left = `${rect.left}px`;
-          tooltip.style.top = `${rect.top - 25}px`; // 在按钮上方显示
-
-          // 添加到文档中
-          document.body.appendChild(tooltip);
-
-          // 200ms 后移除提示
-          setTimeout(() => {
-            document.body.removeChild(tooltip);
-          }, 200);
-        });
-      }
-    },
     sortJson(order) {
       const editor = this.$refs.jsonEditor.editor;
       if (editor) {
@@ -298,111 +361,95 @@ export default {
         }
       }
     },
-    clearInput() {
-      this.inputText = '';
-    },
-    handleSort() {
-      const sortType = this.$refs.sortIcon.currentSortType
-      switch (sortType) {
-        case 'asc':
-          // 执行升序排序
-          this.sortJson('asc')
-          break
-        case 'desc':
-          // 执行降序排序
-          this.sortJson('desc')
-          break
-        default:
-          // 恢复默认顺序
-          this.sortJson('default')
-          break
-      }
-    },
+
     openConfig(event) {
       // 移除事件参数的检查，因为可能从不同地方调用
       this.isConfigOpen = true;
     },
     toggleTheme() {
-      // 暂时不实现切换主题的逻辑
-      console.log('Toggle theme clicked');
+      this.isDarkTheme = !this.isDarkTheme;
+
+      // 获取编辑器容器
+      const editorContainer = document.querySelector('.my-editor');
+
+      if (this.isDarkTheme) {
+        editorContainer.classList.add('jse-theme-dark');
+        // 添加暗色主题的变量
+        document.documentElement.style.setProperty('--jse-theme-color', '#383e42');
+        document.documentElement.style.setProperty('--jse-theme-color-highlight', '#687177');
+      } else {
+        editorContainer.classList.remove('jse-theme-dark');
+        // 恢复默认主题的变量
+        document.documentElement.style.removeProperty('--jse-theme-color');
+        document.documentElement.style.removeProperty('--jse-theme-color-highlight');
+      }
+
+      // 刷新编辑器以应用新主题
+      this.$refs.jsonEditor?.editor?.refresh();
     },
-    handleOutsideClick(event) {
-      // 如果配置面板已打开，且点击的不是配置面板内部和配置按钮
-      if (this.isConfigOpen &&
-        !event.target.closest('.config-panel') &&
-        !event.target.closest('.mr-2[title="Config"]')) {
-        this.isConfigOpen = false;
+
+
+    onRenderValue(props) {
+      // 使用默认的渲染器，但应用当前主题的样式
+      return renderValue(props)
+    },
+    handleEditorUpdate(newContent) {
+      this.content.json = newContent
+      // 保存未排序的原始数据
+      if (!this.originalJson) {
+        this.originalJson = JSON.parse(JSON.stringify(newContent))
       }
     },
-    saveBaseUrl() {
-      // 这里可以添加保存成功的提示
-      const tooltip = document.createElement('div');
-      tooltip.textContent = '保存成功';
-      tooltip.className = 'save-tooltip';
-
-      const button = document.querySelector('.save-btn');
-      const rect = button.getBoundingClientRect();
-      tooltip.style.position = 'fixed';
-      tooltip.style.left = `${rect.left}px`;
-      tooltip.style.top = `${rect.top - 30}px`;
-
-      document.body.appendChild(tooltip);
-
-      setTimeout(() => {
-        document.body.removeChild(tooltip);
-      }, 2000);
-    }
+    handleEditorError(err) {
+      console.error('JSON编辑器错误:', err)
+    },
   },
   watch: {
     inputText: {
       handler(newValue) {
         try {
-          if (!newValue) {
-            this.content = { json: {} };
-            this.isExpanded = false;
-            return;
-          }
-          const jsonObj = JSON.parse(newValue);
-          this.content = {
-            json: jsonObj,
-            text: undefined
-          };
-          this.isExpanded = false;
-        } catch (e) {
-          // JSON 解析错误时不更新 content
-          console.error('Invalid JSON:', e);
-        }
+
       },
       immediate: true
     },
+    fontSize(newSize) {
+      // 更新编辑器字体大小
+      const editor = document.querySelector('.my-editor')
+      if (editor) {
+        editor.style.fontSize = `${newSize}px`
+      }
+      // 保存到本地存储
+      localStorage.setItem('editor-font-size', newSize)
+    }
   }
 }
-</script>
-
-<style>
-/* 将这些样式放在一个不带 scoped 的 style 标签中 */
-.toolbar-content svg,
-.toolbar-paste svg,
-.input-container svg {
-  color: #303030;
-  transition: color 0.2s ease;
-  padding: 10px;
-}
-
-/* 添加透明图片的棋盘格背景 */
-.image-preview img {
-  background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
-    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
-    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
-  background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-  background-color: #ffffff;
-}
-</style>
+</script> -->
 
 <style scoped>
-/* https://github.com/josdejong/svelte-jsoneditor/blob/main/src/lib/themes/defaults.scss */
+.my-editor ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.my-editor ::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  /* 浅灰色轨道 */
+}
+
+.my-editor ::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  /* 浅灰色滑块 */
+  border-radius: 3px;
+}
+
+.my-editor ::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+  /* 悬停时稍微深一点 */
+}
+
+.my-editor ::-webkit-scrollbar-corner {
+  background: #f5f5f5;
+}
+
 .my-editor {
   max-width: 100%;
   width: 100%;
@@ -410,263 +457,15 @@ export default {
   height: 100%;
   overflow: hidden;
   --jse-value-color-number: #f75e53;
-}
-
->>>.jse-tree-mode.no-main-menu.svelte-vrx1dr {
-  border: none;
-  padding: 20px;
-}
-
->>>.jse-tree-mode.svelte-vrx1dr {
-  background-color: #00000000;
-}
-
->>>.jse-tree-mode.svelte-vrx1dr .jse-contents:where(.svelte-vrx1dr) {
-  background-color: #00000000;
-  border: none;
-}
-
->>>.jse-tree-mode.svelte-vrx1dr .jse-contents:where(.svelte-vrx1dr):last-child {
-  border-bottom: none;
-}
-
->>>textarea:focus {
-  /* --tw-ring-color: #00000000; */
-  /* outline: none; */
-  /* box-shadow: 0 0 0 2px var(--tw-ring-color); */
-  border: 1px solid rgba(0, 0, 0, 0.418);
-}
-
-/* 导航栏样式 */
-.navbar {
-  display: flex;
-  align-items: center;
-  padding: 20px 40px 0px 40px;
-  position: relative;
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
-  z-index: 1;
-}
-
-.logo {
-  height: 30px;
-  margin-right: 10px;
-}
-
-.title-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.title {
-  font-size: 1.2em;
-  font-weight: bold;
-  margin: 0;
-}
-
-.subtitle {
-  font-size: 0.9em;
-  margin: 0;
-  color: #666;
-}
-
-.toolbar-content {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 14px 8px 12px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 100px;
-  white-space: nowrap;
-  width: fit-content;
-  margin: 10px 20px;
-}
-
-.toolbar-paste {
-  padding: 8px;
-  background-color: rgba(230, 250, 46, 0.8);
-  border-radius: 100px;
-  margin: 10px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.toolbar-paste:hover {
-  background-color: #000000a4;
-}
-
-.toolbar-paste:active {
-  background-color: #000;
-}
-
-.toolbar-paste:hover svg {
-  fill: rgb(255, 255, 255);
-}
-
-/* 搜索框样式 */
-.search-wrapper {
-  position: relative;
-}
-
-.search-container {
-  display: flex;
-  align-items: center;
-}
-
-.search-input {
-  padding: 4px 8px;
-  border: 1px solid #e0e0e0;
-  font-size: 14px;
-  width: 200px;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #666;
-}
-
-/* 按钮样式 */
-.mr-2 {
-  margin-right: 8px;
-}
-
-.mr-2-end {
-  margin-right: 0px;
-}
-
-/* 修改 toolbar-content 中的图标样式 */
-.mr-2 {
-  cursor: pointer;
-  border-radius: 100px;
-  transition: all 0.2s ease;
-}
-
-.mr-2:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
-}
-
-.mr-2:active {
-  background-color: rgba(0, 0, 0, 0.1);
-  transform: translateY(0px);
-}
-
-.mr-2:hover svg {
-  color: #0a0a0a;
-}
-
-/* 其他样式 */
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  height: 100vh;
-  font-family: sans-serif;
-  overflow: hidden;
-  background-image: url('@/assets/bg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.content {
-  display: flex;
-  flex: 1;
-  padding: 0px 40px 40px 40px;
-  /* gap: 20px; */
-  height: calc(100vh - 60px);
-  overflow: hidden;
-}
-
-.input-container {
-  position: relative;
-  width: 400px;
-  flex-shrink: 0;
-}
-
-.delete-button {
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  width: 36px;
-  height: 36px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s;
-  color: #666;
-  fill: #666666bd;
-}
-
-.delete-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #333;
-}
-
-.delete-button:active {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.input-area {
-  width: 400px;
-  resize: none;
-  height: 100%;
-  padding: 20px;
-  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
   background-color: rgba(250, 250, 250, 0.8);
-}
-
-/* 自定义滚动条样式 */
-.input-area::-webkit-scrollbar,
-.my-editor::-webkit-scrollbar {
-  width: 6px;
-}
-
-.input-area::-webkit-scrollbar-track,
-.my-editor::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  /* 浅灰色轨道 */
-}
-
-.input-area::-webkit-scrollbar-thumb,
-.my-edito::-webkit-scrollbar-thumb {
-  background: #e0e0e0;
-  /* 浅灰色滑块 */
-  border-radius: 3px;
-}
-
-.input-area::-webkit-scrollbar-thumb:hover,
-.my-editor::-webkit-scrollbar-thumb:hover {
-  background: #d0d0d0;
-  /* 悬停时稍微深一点 */
-}
-
-.input-area::-webkit-scrollbar-corner,
-.my-editor::-webkit-scrollbar-corner {
-  background: #f5f5f5;
-}
-
-.copy-tooltip {
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 1000;
-  transform: translateX(-50%);
-  /* 水平居中 */
+  padding: 20px 0px 20px 20px;
 }
 
 .compressed-json {
   width: 100%;
   height: 100%;
   padding: 20px;
-  background-color: rgba(250, 250, 250, 0.8);
-  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -694,6 +493,17 @@ export default {
 
 .compressed-json::-webkit-scrollbar-corner {
   background: #f5f5f5;
+}
+
+/* 添加透明图片的棋盘格背景 */
+.image-preview img {
+  background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-color: #ffffff;
 }
 
 .config-panel {
@@ -781,7 +591,7 @@ export default {
 
 .save-btn {
   padding: 8px 16px;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   border: none;
   border-radius: 4px;
   font-size: 14px;
@@ -820,5 +630,51 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 添加字体大小控制样式 */
+.font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.size-slider {
+  flex: 1;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4caf50;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.size-slider::-webkit-slider-thumb:hover {
+  background: #45a049;
+}
+
+.size-input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.size-input:focus {
+  outline: none;
+  border-color: #4caf50;
 }
 </style>
