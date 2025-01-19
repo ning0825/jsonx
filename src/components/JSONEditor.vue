@@ -45,6 +45,8 @@
             :level="1"
             :expanded="expanded"
             @update:value="(newVal) => updateObjectProperty(key, newVal)"
+            @showPreview="showImagePreview"
+            @hidePreview="hideImagePreview"
           />
         </div>
 
@@ -66,11 +68,90 @@
       <span>{{ getStatusMessage() }}</span>
       <span v-if="error" class="error">{{ error }}</span>
     </div>
+
+    <!-- 弹窗预览 -->
+    <div
+      v-if="previewMode === 'popup'"
+      v-show="showPreview"
+      class="image-preview-popup"
+      :style="previewStyle"
+    >
+      <img
+        :src="previewImageUrl"
+        :alt="previewImageUrl"
+        @error="handleImageError"
+        class="preview-image"
+      />
+    </div>
+
+    <!-- 侧边栏预览 -->
+    <div
+      v-if="previewMode === 'sidebar'"
+      class="image-preview-sidebar"
+      :class="{ show: showPreview }"
+    >
+      <!-- 添加预览头部 -->
+      <div class="preview-header">
+        <span class="preview-title">图片预览</span>
+        <div class="preview-actions">
+          <button
+            class="preview-btn"
+            :class="{ active: previewSize === 'actual' }"
+            @click="previewSize = 'actual'"
+            title="实际大小"
+          >
+            1:1
+          </button>
+          <button
+            class="preview-btn"
+            :class="{ active: previewSize === 'fit' }"
+            @click="previewSize = 'fit'"
+            title="适应空间"
+          >
+            自适应
+          </button>
+          <button
+            class="preview-btn"
+            @click="toggleFullscreen"
+            title="全屏预览"
+          >
+            <span class="fullscreen-icon">⛶</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 添加图片信息 -->
+      <div class="preview-info" v-if="imageInfo">
+        <div class="info-item">
+          <span class="info-label">尺寸:</span>
+          <span class="info-value"
+            >{{ imageInfo.width }} × {{ imageInfo.height }}</span
+          >
+        </div>
+        <div class="info-item">
+          <span class="info-label">类型:</span>
+          <span class="info-value">{{ imageInfo.type }}</span>
+        </div>
+      </div>
+
+      <!-- 图片容器 -->
+      <div class="preview-container" :class="previewSize">
+        <img
+          v-if="previewImageUrl"
+          :src="previewImageUrl"
+          :alt="previewImageUrl"
+          @error="handleImageError"
+          @load="handleImageLoad"
+          class="preview-image"
+          ref="previewImage"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, inject } from "vue";
 import TreeNode from "./TreeNode.vue";
 
 export default {
@@ -109,16 +190,37 @@ export default {
       type: Boolean,
       default: false,
     },
+
+    modelValue: {
+      type: Boolean,
+      default: false,
+    },
   },
 
-  emits: ["update:content", "error", "resetSort"],
+  emits: ["update:content", "error", "resetSort", "update:modelValue"],
 
   setup(props, { emit }) {
+    // 正确注入 previewMode，并提供默认值
+    const previewMode = inject("previewMode", ref("popup"));
+
     const isDarkTheme = ref(false);
     const isExpanded = ref(false);
     const error = ref(null);
     const textContent = ref("");
     const parsedContent = ref({});
+    const showPreview = ref(false);
+    const previewStyle = ref({ left: "0px", top: "0px" });
+    const previewImageUrl = ref("");
+
+    const previewSize = ref("fit");
+    const imageInfo = ref(null);
+    const previewImage = ref(null);
+
+    // 使用计算属性来同步内部和外部的 showPreview 状态
+    const localShowPreview = computed({
+      get: () => props.modelValue,
+      set: (value) => emit("update:modelValue", value),
+    });
 
     // // 计算属性:格式化的JSON字符串
     // const formattedJson = computed(() => {
@@ -372,6 +474,56 @@ export default {
       emit("update:content", newContent);
     };
 
+    const showImagePreview = (url, event) => {
+      console.log(url);
+      const rect = event.target.getBoundingClientRect();
+      previewStyle.value = {
+        left: `${rect.right + 10}px`,
+        top: `${rect.top - 10}px`,
+      };
+      previewImageUrl.value = url;
+      emit("update:modelValue", true);
+    };
+
+    const hideImagePreview = () => {
+      if (previewMode.value === "popup") {
+        emit("update:modelValue", false);
+      }
+    };
+
+    const handleImageError = () => {
+      console.error("Image load failed:", previewImageUrl.value);
+      emit("update:modelValue", false);
+    };
+
+    const handleImageLoad = (event) => {
+      const img = event.target;
+      imageInfo.value = {
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        type: getImageType(previewImageUrl.value),
+      };
+    };
+
+    const getImageType = (url) => {
+      if (url.startsWith("data:image/")) {
+        return url.split(";")[0].split("/")[1].toUpperCase();
+      }
+      const ext = url.split(".").pop().toLowerCase();
+      return ext.toUpperCase();
+    };
+
+    const toggleFullscreen = () => {
+      const img = previewImage.value;
+      if (!img) return;
+
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        img.requestFullscreen();
+      }
+    };
+
     return {
       isDarkTheme,
       isExpanded,
@@ -394,6 +546,18 @@ export default {
       // collapseAll,
       updateObjectProperty,
       sortOrder,
+      showPreview: localShowPreview,
+      previewStyle,
+      previewImageUrl,
+      showImagePreview,
+      hideImagePreview,
+      handleImageError,
+      previewSize,
+      imageInfo,
+      previewImage,
+      handleImageLoad,
+      toggleFullscreen,
+      previewMode,
     };
   },
 };
@@ -516,5 +680,192 @@ export default {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* 图片预览相关样式 */
+.image-preview-popup {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.preview-image {
+  max-width: 300px;
+  max-height: 200px;
+  display: block;
+  border-radius: 2px;
+  background: #f5f5f5;
+}
+
+/* 暗色主题支持 */
+:deep(.jse-theme-dark) {
+  .image-preview-popup {
+    background: #2d2d2d;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .preview-image {
+    background: #1e1e1e;
+  }
+}
+
+/* 修改侧边栏预览样式，与 VueJSONEditor 保持一致 */
+.image-preview-sidebar {
+  position: fixed;
+  right: -320px;
+  top: 0;
+  height: 100vh;
+  width: 320px;
+  background: white;
+  padding: 0;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.image-preview-sidebar.show {
+  right: 0;
+}
+
+.image-preview-sidebar .preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: auto;
+  display: block;
+  background: transparent;
+}
+
+/* 暗色主题支持 */
+:deep(.jse-theme-dark) {
+  .image-preview-sidebar {
+    background: #1e1e1e;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 修改和添加侧边栏预览相关样式 */
+.image-preview-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-btn {
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.preview-btn:hover {
+  background: #f5f5f5;
+}
+
+.preview-btn.active {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.fullscreen-icon {
+  font-size: 14px;
+}
+
+.preview-info {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 12px;
+}
+
+.info-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  color: #666;
+}
+
+.preview-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-container.fit .preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.preview-container.actual .preview-image {
+  max-width: none;
+  max-height: none;
+  object-fit: none;
+}
+
+/* 暗色主题支持 */
+:deep(.jse-theme-dark) {
+  .preview-header,
+  .preview-info {
+    border-color: #404040;
+  }
+
+  .preview-btn {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #d4d4d4;
+  }
+
+  .preview-btn:hover {
+    background: #383838;
+  }
+
+  .preview-btn.active {
+    background: #4caf50;
+    color: white;
+    border-color: #4caf50;
+  }
+
+  .info-label {
+    color: #999;
+  }
 }
 </style>

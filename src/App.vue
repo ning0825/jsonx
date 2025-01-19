@@ -19,6 +19,7 @@
         :readOnly="true"
         :baseImageUrl="baseImageUrl"
         :expanded="isExpanded"
+        v-model="showPreview"
         @resetSort="resetSort"
       />
       <div v-show="isCompressed" class="compressed-json">
@@ -26,53 +27,25 @@
       </div>
     </div>
   </GlassTheme>
-  <!-- 添加设置面板 -->
-  <div class="config-panel" :class="{ show: isConfigOpen }">
-    <div class="config-content">
-      <div class="config-item">
-        <label class="config-label">图片 Base URL</label>
-        <div class="input-with-button">
-          <input
-            type="text"
-            class="config-input"
-            v-model="baseImageUrl"
-            placeholder="请输入图片 Base URL"
-          />
-          <button class="save-btn" @click="saveBaseUrl">保存</button>
-        </div>
-      </div>
-      <div class="config-item">
-        <label class="config-label"> 编辑器字体大小: {{ fontSize }}px </label>
-        <div class="font-size-control">
-          <input
-            type="range"
-            class="size-slider"
-            v-model="fontSize"
-            min="12"
-            max="60"
-            step="1"
-          />
-          <input
-            type="number"
-            class="size-input"
-            v-model="fontSize"
-            min="12"
-            max="60"
-          />
-        </div>
-      </div>
-      <div class="config-item">
-        <label class="config-label">代码主题</label>
-        <button class="theme-toggle-btn" @click="toggleTheme">切换主题</button>
-      </div>
-    </div>
-  </div>
+  <!-- 替换原来的配置面板 -->
+  <ConfigPanel
+    :isConfigOpen="isConfigOpen"
+    :baseImageUrl="baseImageUrl"
+    :fontSize="fontSize"
+    :previewMode="previewMode"
+    @update:baseImageUrl="baseImageUrl = $event"
+    @update:fontSize="fontSize = $event"
+    @update:previewMode="previewMode = $event"
+    @saveBaseUrl="saveBaseUrl"
+    @toggleTheme="toggleTheme"
+  />
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, provide } from "vue";
 import GlassTheme from "@/components/themes/GlassTheme.vue";
 import JSONEditor from "@/components/JSONEditor.vue";
+import ConfigPanel from "@/components/config/ConfigPanel.vue";
 
 var inputText = ref("");
 var content = ref({
@@ -87,10 +60,18 @@ var isCompressed = ref(false);
 var compressedContent = ref("");
 var jsonEditor = ref(null);
 var originalJson = ref(null);
+var previewMode = ref("popup");
+var showPreview = ref(false);
 
 onMounted(() => {
   // 添加点击事件监听
   document.addEventListener("click", handleOutsideClick);
+
+  // 从本地存储加载字体大小
+  const savedFontSize = localStorage.getItem("editor-font-size");
+  if (savedFontSize) {
+    fontSize.value = parseInt(savedFontSize);
+  }
 });
 
 watch(
@@ -113,6 +94,17 @@ watch(
   }
 );
 
+watch(fontSize, (newSize) => {
+  console.log("fontSize", newSize);
+  // 更新编辑器字体大小
+  const editor = document.querySelector(".my-editor");
+  if (editor) {
+    editor.style.fontSize = `${newSize}px`;
+  }
+  // 保存到本地存储
+  localStorage.setItem("editor-font-size", newSize);
+});
+
 async function handlePaste() {
   try {
     const text = await navigator.clipboard.readText();
@@ -130,6 +122,17 @@ function handleOutsideClick(event) {
     !event.target.closest('.mr-2[title="Config"]')
   ) {
     isConfigOpen.value = false;
+  }
+
+  // 如果侧边预览已打开，且点击的不是预览面板内部和图片链接
+  if (
+    showPreview.value &&
+    previewMode.value === "sidebar" &&
+    !event.target.closest(".image-preview-sidebar") &&
+    !event.target.closest(".image-link")
+  ) {
+    // jsonEditor.value?.hidePreview();
+    showPreview.value = false;
   }
 }
 
@@ -178,7 +181,12 @@ function compressJson() {
 }
 
 function copyToClipboard() {
-  const result = JSON.stringify(content.value.json, null, 2);
+  var result = "";
+  if (isCompressed.value) {
+    result = compressedContent.value;
+  } else {
+    result = JSON.stringify(content.value.json, null, 2);
+  }
   navigator.clipboard.writeText(result).then(() => {
     const button = document.querySelector(
       ".toolbar-content .mr-2:nth-child(2)"
@@ -218,6 +226,13 @@ function resetSort() {
     content.value.json = JSON.parse(JSON.stringify(originalJson.value));
   }
 }
+
+function toggleTheme() {
+  // 实现主题切换逻辑
+}
+
+// 将预览模式传递给 JSONEditor
+provide("previewMode", previewMode);
 </script>
 
 <!-- <script>
