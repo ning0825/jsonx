@@ -19,7 +19,6 @@
         :readOnly="true"
         :baseImageUrl="baseImageUrl"
         :expanded="isExpanded"
-        v-model="showPreview"
         @resetSort="resetSort"
       />
       <div v-show="isCompressed" class="compressed-json">
@@ -61,7 +60,6 @@ var compressedContent = ref("");
 var jsonEditor = ref(null);
 var originalJson = ref(null);
 var previewMode = ref("popup");
-var showPreview = ref(false);
 
 onMounted(() => {
   // 添加点击事件监听
@@ -126,13 +124,11 @@ function handleOutsideClick(event) {
 
   // 如果侧边预览已打开，且点击的不是预览面板内部和图片链接
   if (
-    showPreview.value &&
     previewMode.value === "sidebar" &&
     !event.target.closest(".image-preview-sidebar") &&
     !event.target.closest(".image-link")
   ) {
-    // jsonEditor.value?.hidePreview();
-    showPreview.value = false;
+    jsonEditor.value?.hideSidePreview();
   }
 }
 

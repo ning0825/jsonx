@@ -20,7 +20,7 @@
         <div v-else class="image-preview-wrapper">
           <span
             class="value string image-link"
-            @mouseenter="$emit('showPreview', value, $event)"
+            @mouseenter="handleMouseEnter($event)"
             @mouseleave="$emit('hidePreview')"
           >
             "{{ value }}"
@@ -44,6 +44,8 @@
           :level="level + 1"
           :expanded="expanded"
           @update:value="updateArrayItem(index, $event)"
+          @showPreview="$emit('showPreview', item, $event)"
+          @hidePreview="$emit('hidePreview')"
         />
       </template>
       <template v-else>
@@ -55,6 +57,8 @@
           :level="level + 1"
           :expanded="expanded"
           @update:value="updateObjectProperty(key, $event)"
+          @showPreview="$emit('showPreview', val, $event)"
+          @hidePreview="$emit('hidePreview')"
         />
       </template>
       <!-- 添加对象/数组的结束括号 -->
@@ -157,7 +161,14 @@ export default {
       newObject[key] = newValue;
       this.$emit("update:value", newObject);
     },
+
+    handleMouseEnter(event) {
+      console.log("TreeNode mouseenter:", this.value);
+      this.$emit("showPreview", this.value, event);
+    },
   },
+
+  emits: ["update:value", "showPreview", "hidePreview"],
 };
 </script>
 

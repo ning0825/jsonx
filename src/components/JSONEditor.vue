@@ -216,11 +216,11 @@ export default {
     const imageInfo = ref(null);
     const previewImage = ref(null);
 
-    // 使用计算属性来同步内部和外部的 showPreview 状态
-    const localShowPreview = computed({
-      get: () => props.modelValue,
-      set: (value) => emit("update:modelValue", value),
-    });
+    // // 使用计算属性来同步内部和外部的 showPreview 状态
+    // const localShowPreview = computed({
+    //   get: () => props.modelValue,
+    //   set: (value) => emit("update:modelValue", value),
+    // });
 
     // // 计算属性:格式化的JSON字符串
     // const formattedJson = computed(() => {
@@ -475,19 +475,28 @@ export default {
     };
 
     const showImagePreview = (url, event) => {
-      console.log(url);
+      console.log("showImagePreview");
+      console.log("event:", event);
+      console.log("url:", url);
       const rect = event.target.getBoundingClientRect();
       previewStyle.value = {
         left: `${rect.right + 10}px`,
         top: `${rect.top - 10}px`,
       };
       previewImageUrl.value = url;
-      emit("update:modelValue", true);
+      showPreview.value = true;
     };
 
     const hideImagePreview = () => {
       if (previewMode.value === "popup") {
-        emit("update:modelValue", false);
+        showPreview.value = false;
+      }
+    };
+
+    const hideSidePreview = () => {
+      console.log("hideSidePreview");
+      if (previewMode.value === "sidebar") {
+        showPreview.value = false;
       }
     };
 
@@ -546,11 +555,12 @@ export default {
       // collapseAll,
       updateObjectProperty,
       sortOrder,
-      showPreview: localShowPreview,
+      showPreview,
       previewStyle,
       previewImageUrl,
       showImagePreview,
       hideImagePreview,
+      hideSidePreview,
       handleImageError,
       previewSize,
       imageInfo,
