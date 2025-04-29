@@ -2,18 +2,23 @@
   <div class="tree-node" :style="{ marginLeft: level * 8 + 'px' }">
     <div class="node-content">
       <!-- 展开/折叠按钮 -->
-      <span v-if="isExpandable" class="expand-button" @click="toggleExpand">
-        {{ isNodeExpanded ? "▼" : "▶" }}
-      </span>
-      <span v-else class="expand-placeholder"></span>
+      <div @click="toggleExpand" style="cursor: pointer; display: flex;">
+        <span v-if="isExpandable" class="expand-button" :style="{ rotate: isNodeExpanded ? '90deg' : '0deg' }">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.75 13.125C8.625 13.125 8.375 13.125 8.25 13C8 12.75 8 12.375 8.25 12.125L10.375 10L8.25 8C8 7.75 8 7.375 8.25 7.125C8.5 6.875 8.875 6.875 9.125 7.125L11.625 9.625C11.875 9.875 11.875 10.25 11.625 10.5L9.125 13C9.125 13.125 8.875 13.125 8.75 13.125Z" fill="#272636"/>
+          </svg>
+        </span>
+        <span v-else class="expand-placeholder"></span>
 
-      <!-- 键名 -->
-      <span class="key" v-if="name !== undefined">{{ name }}:</span>
+        <!-- 键名 -->
+        <span class="key" v-if="name !== undefined" @click="copy(name)">{{ name }}:</span>
+      </div>
 
       <!-- 值的显示 -->
       <template v-if="!isExpandable || !isNodeExpanded">
         <template v-if="!isImageValue">
-          <span :class="['value', valueType]" :title="getFullValue()">
+          <span :class="['value', valueType]" :title="getFullValue()" :style="{ cursor: isExpandable ? 'pointer' : 'pointer' }"
+          @click="isExpandable ? toggleExpand() : copy(getDisplayValue())">
             {{ getDisplayValue() }}
           </span>
         </template>
@@ -21,7 +26,7 @@
           <span
             class="value string image-link"
             @mouseenter="handleMouseEnter($event)"
-            @mouseleave="$emit('hidePreview')"
+            @mouseleave="handleMouseLeave"
           >
             "{{ value }}"
           </span>
@@ -44,8 +49,6 @@
           :level="level + 1"
           :expanded="expanded"
           @update:value="updateArrayItem(index, $event)"
-          @showPreview="$emit('showPreview', item, $event)"
-          @hidePreview="$emit('hidePreview')"
         />
       </template>
       <template v-else>
@@ -57,12 +60,10 @@
           :level="level + 1"
           :expanded="expanded"
           @update:value="updateObjectProperty(key, $event)"
-          @showPreview="$emit('showPreview', val, $event)"
-          @hidePreview="$emit('hidePreview')"
         />
       </template>
       <!-- 添加对象/数组的结束括号 -->
-      <div class="node-content" :style="{ marginLeft: -8 + 'px' }">
+      <div class="node-content" :style="{ marginLeft: 16 + 'px' }">
         <span class="bracket">{{ Array.isArray(value) ? "]" : "}" }}</span>
       </div>
     </div>
@@ -70,6 +71,8 @@
 </template>
 
 <script>
+import { copyToClipboard } from "@/lib/utils";
+
 export default {
   name: "TreeNode",
 
@@ -95,6 +98,8 @@ export default {
   data() {
     return {
       isNodeExpanded: this.expanded,
+      previewTimer: null,
+      isHovering: false,
     };
   },
 
@@ -121,7 +126,6 @@ export default {
   watch: {
     expanded: {
       handler(newVal) {
-        console.log(newVal);
         this.isNodeExpanded = newVal;
       },
       immediate: true,
@@ -136,7 +140,7 @@ export default {
     getDisplayValue() {
       if (this.value === null) return "null";
       if (this.value === undefined) return "undefined";
-      if (typeof this.value === "string") return `"${this.value}"`;
+      if (typeof this.value === "string") return `${this.value}`;
       if (Array.isArray(this.value)) return `Array(${this.value.length})`;
       if (typeof this.value === "object") return "{...}";
       return String(this.value);
@@ -163,9 +167,40 @@ export default {
     },
 
     handleMouseEnter(event) {
-      console.log("TreeNode mouseenter:", this.value);
-      this.$emit("showPreview", this.value, event);
+      // 清除之前的定时器（如果存在）
+      if (this.previewTimer) {
+        clearTimeout(this.previewTimer);
+      }
+      
+      // 标记鼠标在元素上
+      this.isHovering = true;
+      
+      // 使用定时器，鼠标悬停300毫秒后才显示预览
+      this.previewTimer = setTimeout(() => {
+        // 只有当鼠标仍在元素上时才触发预览
+        if (this.isHovering) {
+          this.emitter.emit("showPreview", this.value, event);
+        }
+      }, 300);
     },
+
+    handleMouseLeave() {
+      // 标记鼠标已离开
+      this.isHovering = false;
+      
+      // 清除定时器
+      if (this.previewTimer) {
+        clearTimeout(this.previewTimer);
+        this.previewTimer = null;
+      }
+      
+      // 触发隐藏预览事件
+      // this.emitter.emit('hidePreview');
+    },
+
+    copy(text) {
+      this.emitter.emit("copy", text);
+    }
   },
 
   emits: ["update:value", "showPreview", "hidePreview"],
@@ -180,7 +215,7 @@ export default {
 
 .node-content {
   display: flex;
-  align-items: center;
+  align-items: start;
   padding: 2px 0;
 }
 
@@ -189,6 +224,7 @@ export default {
   cursor: pointer;
   user-select: none;
   color: #666;
+  transition: 0.2s ease-in-out;
 }
 
 .expand-placeholder {
@@ -198,10 +234,17 @@ export default {
 .key {
   color: #881391;
   margin-right: 4px;
+  cursor: pointer;
 }
 
 .value {
   color: #1a1a1a;
+  cursor: pointer;
+}
+
+.value:hover, .key:hover {
+  background: #dfdfdf;
+  border-radius: 4px;
 }
 
 .value.string {

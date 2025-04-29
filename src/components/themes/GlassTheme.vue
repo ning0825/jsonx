@@ -5,21 +5,73 @@
       <div class="nav-left">
         <img src="@/assets/logo.png" alt="Logo" class="logo" />
         <div class="title-container">
-          <div class="title">JsonX</div>
+          <!-- <div class="title">JsonX</div> -->
+          <svg
+            width="128"
+            height="24"
+            viewBox="0 0 200 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9.8881 23.1601C6.73077 23.1601 4.40544 22.6055 2.9121 21.4961C1.4401 20.3655 0.704102 18.6375 0.704102 16.3121C0.704102 15.7575 0.768102 15.1921 0.896102 14.6161H6.0161C5.97344 14.8935 5.94144 15.1601 5.9201 15.4161C5.89877 15.6721 5.8881 15.8855 5.8881 16.0561C5.8881 17.2295 6.32544 18.0188 7.2001 18.4241C8.07477 18.8081 9.25877 19.0001 10.7521 19.0001H12.7681C14.5814 19.0001 15.8614 18.7121 16.6081 18.1361C17.3761 17.5388 17.7601 16.4295 17.7601 14.8081V0.120117H22.8801V14.8081C22.8801 16.6855 22.5921 18.2428 22.0161 19.4801C21.4401 20.7175 20.4801 21.6455 19.1361 22.2641C17.7921 22.8615 15.9574 23.1601 13.6321 23.1601H9.8881Z"
+              fill="black"
+            />
+            <path
+              d="M26.3411 23.1601V19.4801H42.0211C42.9171 19.4801 43.3651 18.9788 43.3651 17.9761C43.3651 16.9948 42.9171 16.5041 42.0211 16.5041H31.8771C29.9784 16.5041 28.5384 16.0775 27.5571 15.2241C26.5758 14.3495 26.0851 13.1015 26.0851 11.4801C26.0851 9.83745 26.5758 8.57878 27.5571 7.70412C28.5598 6.80812 29.9998 6.36012 31.8771 6.36012H46.4691V10.0401H32.1011C31.1838 10.0401 30.7251 10.4881 30.7251 11.3841C30.7251 11.8321 30.8531 12.1841 31.1091 12.4401C31.3651 12.6961 31.6958 12.8241 32.1011 12.8241H42.8531C44.5171 12.8241 45.7864 13.2615 46.6611 14.1361C47.5571 14.9895 48.0051 16.2375 48.0051 17.8801C48.0051 19.5441 47.5571 20.8455 46.6611 21.7841C45.7651 22.7015 44.4958 23.1601 42.8531 23.1601H26.3411Z"
+              fill="black"
+            />
+            <path
+              d="M59.1769 23.1601C56.3182 23.1601 54.0889 22.4561 52.4889 21.0481C50.8889 19.6188 50.0889 17.5281 50.0889 14.7761C50.0889 12.0028 50.8889 9.91212 52.4889 8.50412C54.0889 7.07478 56.3182 6.36012 59.1769 6.36012H65.0969C67.9555 6.36012 70.1849 7.07478 71.7849 8.50412C73.3849 9.91212 74.1849 12.0028 74.1849 14.7761C74.1849 17.5281 73.3849 19.6188 71.7849 21.0481C70.1849 22.4561 67.9555 23.1601 65.0969 23.1601H59.1769ZM59.1769 19.4801H65.0969C66.4835 19.4801 67.5395 19.0961 68.2649 18.3281C69.0115 17.5601 69.3848 16.3761 69.3848 14.7761C69.3848 13.1548 69.0115 11.9601 68.2649 11.1921C67.5395 10.4241 66.4835 10.0401 65.0969 10.0401H59.1769C57.7902 10.0401 56.7235 10.4241 55.9769 11.1921C55.2515 11.9601 54.8889 13.1548 54.8889 14.7761C54.8889 16.3761 55.2515 17.5601 55.9769 18.3281C56.7235 19.0961 57.7902 19.4801 59.1769 19.4801Z"
+              fill="black"
+            />
+            <path
+              d="M77.0726 23.0001V6.52012H91.4406C93.3179 6.52012 94.6833 6.98945 95.5366 7.92812C96.4113 8.84545 96.8486 10.0615 96.8486 11.5761V23.0001H92.2086V12.1201C92.2086 10.8401 91.5686 10.2001 90.2886 10.2001H81.7126V23.0001H77.0726Z"
+              fill="black"
+            />
+            <path
+              d="M98.7576 23.0001L107.334 11.5761L98.7576 0.120117H104.998L111.878 9.49612H114.822L121.702 0.120117H127.942L119.366 11.5761L127.942 23.0001H121.67L114.822 13.6561H111.878L105.03 23.0001H98.7576Z"
+              fill="black"
+            />
+          </svg>
         </div>
       </div>
     </nav>
 
     <div>
       <div class="toolbar-paste" style="position: absolute">
-        <PasteButton @click="$emit('handlePaste')" />
+        <SimpleTooltip content="Replace current content with clipboard content">
+          <PasteButton @click="$emit('handlePaste')" />
+        </SimpleTooltip>
       </div>
       <div class="toolbar-content">
-        <ExpandedIcon class="mr-2" :isExpanded="isExpanded" @click="onExpand" />
-        <CopyIcon class="mr-2" @click="$emit('copyToClipboard')" />
-        <SortAscIcon ref="sortIcon" class="mr-2" @click="$emit('handleSort')" />
-        <CompressIcon class="mr-2" @click="onCompress" />
-        <ConfigIcon class="mr-2" title="Config" @click="$emit('openConfig')" />
+        <SimpleTooltip content="expand/collapse">
+          <ExpandedIcon
+            class="mr-2"
+            :isExpanded="isExpanded"
+            @click="onExpand"
+          />
+        </SimpleTooltip>
+        <SimpleTooltip content="copy to clipboard">
+          <CopyIcon class="mr-2" @click="$emit('copyToClipboard')" />
+        </SimpleTooltip>
+        <SimpleTooltip content="sort by first letter">
+          <SortAscIcon
+            ref="sortIcon"
+            class="mr-2"
+            @click="$emit('handleSort')"
+          />
+        </SimpleTooltip>
+        <SimpleTooltip content="compress">
+          <CompressIcon class="mr-2" @click="onCompress" />
+        </SimpleTooltip>
+        <SimpleTooltip content="open configration">
+          <ConfigIcon
+            class="mr-2"
+            title="Config"
+            @click="$emit('openConfig')"
+          />
+        </SimpleTooltip>
       </div>
     </div>
 
@@ -27,11 +79,14 @@
     <div class="content">
       <!-- 左侧输入框 -->
       <div class="input-container">
-        <Textarea
+        <textarea
           class="input-area"
-          placeholder="在此输入 JSON"
+          placeholder="Click the button above ↗️ to paste content"
           v-model="iText"
           @input="onInput"
+          @dblclick.prevent
+          :style="{ color: errorMsg ? 'black' : '#999' }"
+          aria-hidden="true"
         />
         <DeleteButton class="delete-button" @click="$emit('clearInput')" />
       </div>
@@ -54,9 +109,9 @@ import CopyIcon from "@/components/icons/CopyIcon.vue";
 import SortAscIcon from "@/components/icons/SortAscIcon.vue";
 import CompressIcon from "@/components/icons/CompressIcon.vue";
 import ConfigIcon from "@/components/icons/ConfigIcon.vue";
-import { Textarea } from "@/components/ui/textarea";
 import DeleteButton from "@/components/icons/DeleteButton.vue";
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref, onMounted, nextTick, watch, onUnmounted } from "vue";
+import SimpleTooltip from "../SimpleTooltip.vue";
 
 var isExpanded = ref(false);
 var isCompressed = ref(false);
@@ -64,6 +119,10 @@ var iText = ref("");
 
 const props = defineProps({
   inputText: {
+    type: String,
+    default: "",
+  },
+  errorMsg: {
     type: String,
     default: "",
   },
@@ -99,8 +158,28 @@ onMounted(() => {
       }
     }
     updatePasteButtonPosition();
+
+    // 添加全局双击事件监听，防止双击选中输入框文本
+    document.addEventListener("dblclick", handleGlobalDblClick);
   });
 });
+
+// 在组件卸载时移除事件监听
+onUnmounted(() => {
+  document.removeEventListener("dblclick", handleGlobalDblClick);
+});
+
+// 处理全局双击事件
+function handleGlobalDblClick(event) {
+  // 如果双击发生在输入框外部
+  if (!event.target.closest(".input-area")) {
+    // 阻止默认选中行为
+    event.preventDefault();
+
+    // 清除任何可能的选中
+    // window.getSelection().removeAllRanges();
+  }
+}
 
 function onInput(event) {
   emit("update:inputText", event.target.value);
@@ -254,11 +333,12 @@ function onExpand() {
   background-repeat: no-repeat;
 }
 
->>> textarea:focus {
+:deep(textarea:focus) {
   /* --tw-ring-color: #00000000; */
   /* outline: none; */
   /* box-shadow: 0 0 0 2px var(--tw-ring-color); */
-  border: 1px solid rgba(0, 0, 0, 0.418);
+  /* border: 1px solid rgba(0, 0, 0, 0.418); */
+  color: black !important;
 }
 
 /* 导航栏样式 */
@@ -315,6 +395,8 @@ function onExpand() {
   margin: 10px 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 52px;
+  height: 52px;
 }
 
 .toolbar-paste:hover {
@@ -369,12 +451,12 @@ function onExpand() {
 
 .mr-2:hover {
   background-color: rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
+  /* transform: translateY(-1px); */
 }
 
 .mr-2:active {
   background-color: rgba(0, 0, 0, 0.1);
-  transform: translateY(0px);
+  /* transform: translateY(0px); */
 }
 
 .mr-2:hover svg {
@@ -427,6 +509,13 @@ function onExpand() {
   font-size: 14px;
   line-height: 1.5;
   background-color: rgba(250, 250, 250, 0.8);
+  /* 防止双击选中文本 */
+  user-select: none;
+}
+
+/* 在输入状态下恢复文本选择功能 */
+.input-area:focus {
+  user-select: text;
 }
 
 /* input-area 的滚动条样式可以保留在这里 */
@@ -461,5 +550,9 @@ function onExpand() {
   z-index: 1000;
   transform: translateX(-50%);
   /* 水平居中 */
+}
+
+textarea:focus-visible {
+  outline: none;
 }
 </style>

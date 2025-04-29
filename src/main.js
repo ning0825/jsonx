@@ -1,11 +1,17 @@
-import './assets/main.css'
+// import "./assets/base.css";
+import "./assets/index.css";
 
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
+import { createApp } from "vue";
+import App from "./App.vue";
+import Test from "./Test.vue";
 
-const app = createApp(App)
+import mitt from 'mitt';
+const emitter = mitt();
 
-app.use(router)
+const app = createApp(App);
 
-app.mount('#app')
+app.config.globalProperties.emitter = emitter;
+
+// app.component("Test", Test);
+
+app.mount("#app");

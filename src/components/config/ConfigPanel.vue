@@ -1,65 +1,102 @@
 <template>
   <div class="config-panel" :class="{ show: isConfigOpen }">
-    <div class="config-content">
-      <div class="config-item">
-        <label class="config-label">图片 Base URL</label>
-        <div class="input-with-button">
-          <input
-            type="text"
-            class="config-input"
-            :value="baseImageUrl"
-            @input="$emit('update:baseImageUrl', $event.target.value)"
-            placeholder="请输入图片 Base URL"
-          />
-          <button class="save-btn" @click="saveBaseUrl">保存</button>
+    <Transition name="slide-up">
+      <div class="config-content">
+        <div class="config-item">
+          <label class="config-label">Image Base URL</label>
+          <div class="input-with-button">
+            <input
+              type="text"
+              class="config-input"
+              v-model="baseImageUrl"
+              placeholder="https://..."
+            />
+            <button class="save-btn" @click="saveBaseUrl">保存</button>
+          </div>
+          <div style="color: #eee; font-size: 12px; padding: 4px 8px">
+            If the image field doesn't start with http/https, the image base URL
+            will be prepended to preview the image
+          </div>
         </div>
-      </div>
-      <div class="config-item">
-        <label class="config-label"> 编辑器字体大小: {{ fontSize }}px </label>
-        <div class="font-size-control">
-          <input
-            type="range"
-            class="size-slider"
-            :value="fontSize"
-            @input="$emit('update:fontSize', parseInt($event.target.value))"
-            min="12"
-            max="60"
-            step="1"
-          />
-          <input
-            type="number"
-            class="size-input"
-            :value="fontSize"
-            @input="$emit('update:fontSize', parseInt($event.target.value))"
-            min="12"
-            max="60"
-          />
+        <div class="config-item">
+          <label class="config-label">
+            Editor Font Size: {{ fontSize }}px
+          </label>
+          <div class="font-size-control">
+            <input
+              type="range"
+              class="size-slider"
+              :value="fontSize"
+              @input="$emit('update:fontSize', parseInt($event.target.value))"
+              min="12"
+              max="60"
+              step="1"
+            />
+            <div class="size-input-group">
+              <input
+                type="number"
+                class="size-input"
+                :value="fontSize"
+                @input="$emit('update:fontSize', parseInt($event.target.value))"
+                min="12"
+                max="50"
+              />
+              <button
+                class="reset-btn"
+                @click="$emit('update:fontSize', 16)"
+                title="重置为默认值"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="config-item">
-        <label class="config-label">代码主题</label>
-        <button class="theme-toggle-btn" @click="toggleTheme">切换主题</button>
-      </div>
-      <div class="config-item">
-        <label class="config-label">图片预览模式</label>
-        <div class="preview-mode-control">
-          <button
-            class="mode-btn"
-            :class="{ active: previewMode === 'popup' }"
-            @click="$emit('update:previewMode', 'popup')"
-          >
-            弹窗预览
+        <div class="config-item">
+          <label class="config-label">Code Theme</label>
+          <button class="theme-toggle-btn" @click="toggleTheme">
+            Switch Theme
           </button>
-          <button
-            class="mode-btn"
-            :class="{ active: previewMode === 'sidebar' }"
-            @click="$emit('update:previewMode', 'sidebar')"
-          >
-            侧边栏预览
-          </button>
+        </div>
+        <div class="config-item">
+          <label class="config-label">Image Preview Mode</label>
+          <div class="preview-mode-control">
+            <button
+              class="mode-btn"
+              :class="{ active: previewMode === 'popup' }"
+              @click="$emit('update:previewMode', 'popup')"
+            >
+              Popup Preview
+            </button>
+            <button
+              class="mode-btn"
+              :class="{ active: previewMode === 'sidebar' }"
+              @click="$emit('update:previewMode', 'sidebar')"
+            >
+              Sidebar Preview
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
+    <transition name="fade">
+      <div class="how-to-close-prompt" v-if="shouldShowClosePrompt">
+        Click outside to hide the panel.
+        <button class="close-btn" @click="gotItClick">Got It</button>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -68,7 +105,6 @@ export default {
   name: "ConfigPanel",
   props: {
     isConfigOpen: Boolean,
-    baseImageUrl: String,
     fontSize: Number,
     previewMode: {
       type: String,
@@ -83,12 +119,26 @@ export default {
     "saveBaseUrl",
     "toggleTheme",
   ],
+  data() {
+    return {
+      shouldShowClosePrompt: localStorage.getItem("closePrompt") !== "true",
+      baseImageUrl: localStorage.getItem("baseImageUrl") || "",
+    };
+  },
   methods: {
     saveBaseUrl() {
-      this.$emit("saveBaseUrl");
+      localStorage.setItem("baseImageUrl", this.baseImageUrl);
+      this.$emit('update:baseImageUrl', this.baseImageUrl)
+      this.$emit("saveBaseUrl", this.baseImageUrl);
     },
     toggleTheme() {
       this.$emit("toggleTheme");
+    },
+    gotItClick(e) {
+      this.shouldShowClosePrompt = false;
+      localStorage.setItem("closePrompt", "true");
+      e.stopPropagation();
+      e.preventDefault();
     },
   },
 };
@@ -97,16 +147,18 @@ export default {
 <style scoped>
 .config-panel {
   position: fixed;
-  right: 0;
-  top: 0;
-  height: 100vh;
+  right: 16px;
+  top: 16px;
+  bottom: 16px;
+  height: auto;
   width: 400px;
-  background: rgba(250, 250, 250, 0.8);
+  background: rgba(71, 71, 71, 0.8);
   overflow: hidden;
   z-index: 1000;
-  transform: translateX(100%);
+  transform: translateX(110%);
   transition: transform 0.3s ease;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
 }
 
 .config-panel.show {
@@ -117,16 +169,28 @@ export default {
   padding: 20px;
 }
 
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.9s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
 .config-item {
-  margin-bottom: 20px;
+  margin-bottom: 40px;
 }
 
 .config-label {
   display: block;
   margin-bottom: 8px;
   font-size: 14px;
-  color: #333;
+  color: #ffffff;
   font-weight: 500;
+  font-weight: bold;
 }
 
 .input-with-button {
@@ -219,6 +283,12 @@ export default {
   background: #45a049;
 }
 
+.size-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .size-input {
   width: 60px;
   padding: 4px 8px;
@@ -231,6 +301,29 @@ export default {
 .size-input:focus {
   outline: none;
   border-color: #4caf50;
+}
+
+.reset-btn {
+  padding: 4px;
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  background-color: #f5f5f5;
+  color: #333;
+  border-color: #ccc;
+}
+
+.reset-btn:active {
+  background-color: #e0e0e0;
 }
 
 .preview-mode-control {
@@ -263,6 +356,29 @@ export default {
   background-color: #45a049;
 }
 
+.how-to-close-prompt {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #2d2d2d;
+  color: #f5f5f5;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.close-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
 /* 暗色主题支持 */
 :deep(.jse-theme-dark) {
   .mode-btn {
@@ -282,5 +398,32 @@ export default {
   .mode-btn.active:hover {
     background-color: #45a049;
   }
+
+  .reset-btn {
+    border-color: #404040;
+    color: #999;
+  }
+
+  .reset-btn:hover {
+    background-color: #383838;
+    color: #d4d4d4;
+    border-color: #505050;
+  }
+
+  .reset-btn:active {
+    background-color: #2d2d2d;
+  }
+}
+
+/* 添加淡入淡出的过渡效果 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
 }
 </style>

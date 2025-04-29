@@ -7,29 +7,40 @@
     @clearInput="clearInput"
     @update:inputText="updateInputText"
     @compressJson="compressJson"
-    @copyToClipboard="copyToClipboard"
+    @copyToClipboard="copyJson"
     @handleSort="handleSort"
+    :errorMsg="errorMsg"
   >
     <div class="my-editor">
+      <div v-show="errorMsg" class="error-msg">
+        {{ errorMsg }}
+        <div>
+          <Button
+            style="display: block; margin-top: 12px; color: black"
+            variant="outline"
+            @click="fixIt"
+          >
+            Fix it
+          </Button>
+        </div>
+      </div>
+      <div v-show="isCompressed" class="compressed-json">
+        invalid json format
+      </div>
       <JSONEditor
-        v-show="!isCompressed"
+        v-show="!errorMsg"
         ref="jsonEditor"
-        :content="content.json"
+        :content="content"
         :mode="'tree'"
         :readOnly="true"
-        :baseImageUrl="baseImageUrl"
         :expanded="isExpanded"
         @resetSort="resetSort"
       />
-      <div v-show="isCompressed" class="compressed-json">
-        {{ compressedContent }}
-      </div>
     </div>
   </GlassTheme>
   <!-- 替换原来的配置面板 -->
   <ConfigPanel
     :isConfigOpen="isConfigOpen"
-    :baseImageUrl="baseImageUrl"
     :fontSize="fontSize"
     :previewMode="previewMode"
     @update:baseImageUrl="baseImageUrl = $event"
@@ -38,28 +49,76 @@
     @saveBaseUrl="saveBaseUrl"
     @toggleTheme="toggleTheme"
   />
+  <!-- 弹窗预览 -->
+  <div
+    v-if="previewMode === 'popup'"
+    v-show="showPreview"
+    class="image-preview-popup"
+    :style="previewStyle"
+  >
+    <img
+      :src="previewImageUrl"
+      :alt="previewImageUrl"
+      @error="handleImageError"
+      class="preview-image"
+    />
+  </div>
+
+  <sidebar-image-preview v-if="previewMode === 'sidebar'" ref="sidebarImagePreview"></sidebar-image-preview>
+
+  <div class="copy-success-tip">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 0C6.41775 0 4.87103 0.469192 3.55544 1.34824C2.23985 2.22729 1.21447 3.47672 0.608967 4.93853C0.00346625 6.40034 -0.15496 8.00887 0.153721 9.56072C0.462403 11.1126 1.22433 12.538 2.34315 13.6569C3.46197 14.7757 4.88743 15.5376 6.43928 15.8463C7.99113 16.155 9.59966 15.9965 11.0615 15.391C12.5233 14.7855 13.7727 13.7602 14.6518 12.4446C15.5308 11.129 16 9.58225 16 8C16 5.87827 15.1571 3.84344 13.6569 2.34315C12.1566 0.842855 10.1217 0 8 0ZM13.225 5.315L6.655 11.88L2.775 8C2.6424 7.86739 2.5679 7.68754 2.5679 7.5C2.5679 7.31246 2.6424 7.13261 2.775 7C2.90761 6.86739 3.08747 6.79289 3.275 6.79289C3.46254 6.79289 3.6424 6.86739 3.775 7L6.665 9.89L12.235 4.325C12.3007 4.25934 12.3786 4.20725 12.4644 4.17172C12.5502 4.13618 12.6421 4.11789 12.735 4.11789C12.8279 4.11789 12.9198 4.13618 13.0056 4.17172C13.0914 4.20725 13.1693 4.25934 13.235 4.325C13.3007 4.39066 13.3528 4.46861 13.3883 4.5544C13.4238 4.64019 13.4421 4.73214 13.4421 4.825C13.4421 4.91786 13.4238 5.00981 13.3883 5.0956C13.3528 5.18139 13.3007 5.25934 13.235 5.325L13.225 5.315Z"
+        fill="#7FE1BA"
+      />
+    </svg>
+    <div style="width: 8px"></div>
+    <div>{{ toastMsg }}</div>
+  </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, provide } from "vue";
+import {
+  ref,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+  getCurrentInstance,
+} from "vue";
 import GlassTheme from "@/components/themes/GlassTheme.vue";
 import JSONEditor from "@/components/JSONEditor.vue";
 import ConfigPanel from "@/components/config/ConfigPanel.vue";
+import jsonFormat from "@/util/format";
+import { Button } from "@/components/ui/button";
+import SidebarImagePreview from "@/components/ui/SidebarImagePreview.vue";
+
+const { proxy } = getCurrentInstance();
 
 var inputText = ref("");
-var content = ref({
-  json: {},
-  text: undefined,
-});
+var content = ref({});
 var isConfigOpen = ref(false);
 var baseImageUrl = ref("");
 var fontSize = ref(14);
-var isExpanded = ref(false);
+var isExpanded = ref(true);
 var isCompressed = ref(false);
 var compressedContent = ref("");
 var jsonEditor = ref(null);
 var originalJson = ref(null);
+
 var previewMode = ref("popup");
+var previewStyle = ref({ left: "0px", top: "0px" });
+var previewImageUrl = ref("");
+var imageInfo = ref(null);
+var errorMsg = ref("");
+var toastMsg = ref("");
+var previewSize = ref("fit");
 
 onMounted(() => {
   // 添加点击事件监听
@@ -69,39 +128,79 @@ onMounted(() => {
   const savedFontSize = localStorage.getItem("editor-font-size");
   if (savedFontSize) {
     fontSize.value = parseInt(savedFontSize);
+  } else {
+    fontSize.value = 16;
   }
+
+  // 从本地存储加载预览模式
+  const savedPreviewMode = localStorage.getItem("preview-mode");
+  if (savedPreviewMode) {
+    previewMode.value = savedPreviewMode;
+  }
+
+  baseImageUrl.value = localStorage.getItem('baseImageUrl')
+
+  proxy.emitter.on("copy", (text) => {
+    toastMsg.value = text;
+    copyToClipboard(text);
+  });
+
+  proxy.emitter.on("showToast", (text) => {
+    showToast(text);
+  });
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleOutsideClick);
 });
 
 watch(
   () => inputText.value,
   (newVal) => {
-    try {
-      if (!newVal) {
-        content.value.json = {};
-        originalJson.value = {}; // 重置原始数据
-        isExpanded.value = false;
-        return;
-      }
-      const jsonObj = JSON.parse(newVal);
-      content.value.json = jsonObj;
-      originalJson.value = JSON.parse(JSON.stringify(jsonObj)); // 保存原始数据
+    if (!newVal) {
+      content.value = {};
+      originalJson.value = {}; // 重置原始数据
       isExpanded.value = false;
-    } catch (e) {
-      console.error("Invalid JSON:", e);
+      errorMsg.value = "";
+      let ta = document.querySelector(".input-area");
+      if (ta) {
+        ta.focus();
+      }
+      return;
     }
+
+    formatFunc();
   }
 );
 
+// 监听字体大小变化，保存到本地存储
 watch(fontSize, (newSize) => {
-  console.log("fontSize", newSize);
   // 更新编辑器字体大小
   const editor = document.querySelector(".my-editor");
   if (editor) {
     editor.style.fontSize = `${newSize}px`;
   }
-  // 保存到本地存储
   localStorage.setItem("editor-font-size", newSize);
 });
+
+// 监听预览模式变化，保存到本地存储
+watch(previewMode, (newVal) => {
+  localStorage.setItem("preview-mode", newVal);
+});
+
+function formatFunc(autoFix = false) {
+  let result = jsonFormat(inputText.value, { autoFix: autoFix });
+  if (!result.error) {
+    content.value = result.object;
+    errorMsg.value = "";
+  } else {
+    errorMsg.value = result.error;
+  }
+}
+
+function fixIt() {
+  formatFunc(true);
+}
 
 async function handlePaste() {
   try {
@@ -113,6 +212,7 @@ async function handlePaste() {
 }
 
 function handleOutsideClick(event) {
+  console.log("handleOutsideClick", event);
   // 如果配置面板已打开，且点击的不是配置面板内部和配置按钮
   if (
     isConfigOpen.value &&
@@ -128,7 +228,8 @@ function handleOutsideClick(event) {
     !event.target.closest(".image-preview-sidebar") &&
     !event.target.closest(".image-link")
   ) {
-    jsonEditor.value?.hideSidePreview();
+    // showPreview.value = false;
+    proxy.emitter.emit('hidePreview')
   }
 }
 
@@ -141,22 +242,7 @@ function toggleExpand() {
 }
 
 function saveBaseUrl() {
-  // 这里可以添加保存成功的提示
-  const tooltip = document.createElement("div");
-  tooltip.textContent = "保存成功";
-  tooltip.className = "save-tooltip";
-
-  const button = document.querySelector(".save-btn");
-  const rect = button.getBoundingClientRect();
-  tooltip.style.position = "fixed";
-  tooltip.style.left = `${rect.left}px`;
-  tooltip.style.top = `${rect.top - 30}px`;
-
-  document.body.appendChild(tooltip);
-
-  setTimeout(() => {
-    document.body.removeChild(tooltip);
-  }, 2000);
+  showToast("Saved!");
 }
 
 function clearInput() {
@@ -171,37 +257,49 @@ function compressJson() {
   if (isCompressed.value) {
     isCompressed.value = false;
   } else {
-    compressedContent.value = JSON.stringify(content.value.json);
+    compressedContent.value = JSON.stringify(content.value);
     isCompressed.value = true;
   }
 }
 
-function copyToClipboard() {
+function copyJson() {
   var result = "";
   if (isCompressed.value) {
     result = compressedContent.value;
   } else {
-    result = JSON.stringify(content.value.json, null, 2);
+    result = JSON.stringify(content.value, null, 2);
   }
-  navigator.clipboard.writeText(result).then(() => {
-    const button = document.querySelector(
-      ".toolbar-content .mr-2:nth-child(2)"
-    );
-    const tooltip = document.createElement("div");
-    tooltip.textContent = "copied!";
-    tooltip.className = "copy-tooltip";
+  copyToClipboard(result);
+}
 
-    const rect = button.getBoundingClientRect();
-    tooltip.style.position = "fixed";
-    tooltip.style.left = `${rect.left}px`;
-    tooltip.style.top = `${rect.top - 25}px`;
-
-    document.body.appendChild(tooltip);
-
-    setTimeout(() => {
-      document.body.removeChild(tooltip);
-    }, 200);
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("Copied!");
   });
+}
+
+function showToast(text) {
+  toastMsg.value = text;
+  let tooltip = document.querySelector(".copy-success-tip");
+
+  // 添加动画效果 - 第一步：显示
+  setTimeout(() => {
+    tooltip.style.opacity = "1";
+  }, 10);
+
+  // 第二步：从上到下移动
+  setTimeout(() => {
+    tooltip.style.top = "20px"; // 最终位置
+  }, 50);
+
+  // 添加消失动画
+  setTimeout(() => {
+    tooltip.style.top = "-50px";
+    // 移动回顶部
+    setTimeout(() => {
+      tooltip.style.opacity = "0";
+    }, 100);
+  }, 1200);
 }
 
 function handleSort() {
@@ -219,7 +317,7 @@ function handleSort() {
 
 function resetSort() {
   if (originalJson.value) {
-    content.value.json = JSON.parse(JSON.stringify(originalJson.value));
+    content.value = JSON.parse(JSON.stringify(originalJson.value));
   }
 }
 
@@ -227,8 +325,37 @@ function toggleTheme() {
   // 实现主题切换逻辑
 }
 
-// 将预览模式传递给 JSONEditor
-provide("previewMode", previewMode);
+
+
+// const showImagePreview = (url, event) => {
+//   console.log('showImage', url)
+//   const rect = event.target.getBoundingClientRect();
+//   previewStyle.value = {
+//     left: `${rect.right + 10}px`,
+//     top: `${rect.top - 10}px`,
+//   };
+
+//   if (!url.match(/^https?:\/\//)) {
+//     // 从localstorage里取ImageBaseUrl拼接
+//     let baseImageUrl = localStorage.getItem('baseImageUrl')
+//     if (baseImageUrl) {
+//       const baseUrl = baseImageUrl.endsWith('/') ? baseImageUrl : `${baseImageUrl}/`;
+//       const imageUrl = url.startsWith('/') ? url.slice(1) : url;
+//       url = baseUrl + imageUrl;
+//     }
+//   }
+
+//   previewImageUrl.value = url;
+//   showPreview.value = true;
+// };
+
+// const hideImagePreview = () => {
+//   if (previewMode.value === "popup") {
+//     showPreview.value = false;
+//   }
+// };
+
+
 </script>
 
 <!-- <script>
@@ -470,6 +597,23 @@ export default {
   --jse-value-color-number: #f75e53;
   background-color: rgba(250, 250, 250, 0.8);
   padding: 20px 0px 20px 20px;
+  position: relative;
+}
+
+.error-msg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 20px;
+  font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+  color: #ffdfdf;
+  background-color: rgba(255, 9, 9, 0.685);
 }
 
 .compressed-json {
@@ -513,11 +657,15 @@ export default {
     linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
     linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
   background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
   background-color: #ffffff;
 }
 
-.config-panel {
+/* .config-panel {
   position: fixed;
   right: 0;
   top: 0;
@@ -527,9 +675,9 @@ export default {
   overflow: hidden;
   z-index: 1000;
   transform: translateX(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.48, 0.3, 0.05, 1);
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-}
+} */
 
 .config-panel.show {
   transform: translateX(0);
@@ -687,5 +835,88 @@ export default {
 .size-input:focus {
   outline: none;
   border-color: #4caf50;
+}
+
+/* 添加图片预览样式 */
+.image-preview {
+  max-width: 100px;
+  max-height: 100px;
+  margin: 4px 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+  background-size: 20px 20px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
+  background-color: #ffffff;
+}
+
+.image-preview img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 图片预览相关样式 */
+.image-preview-popup {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.preview-image {
+  max-width: 300px;
+  max-height: 200px;
+  display: block;
+  border-radius: 2px;
+  background: #f5f5f5;
+}
+
+/* 暗色主题支持 */
+:deep(.jse-theme-dark) {
+  .image-preview-popup {
+    background: #2d2d2d;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .preview-image {
+    background: #1e1e1e;
+  }
+}
+
+.copy-success-tip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #1d1c32;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 8px;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  top: -100px;
+  transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.tip-show {
+  top: 10px;
+}
+
+.tip-hide {
+  top: -100px;
 }
 </style>
