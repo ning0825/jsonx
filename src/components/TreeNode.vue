@@ -27,8 +27,9 @@
             class="value string image-link"
             @mouseenter="handleMouseEnter($event)"
             @mouseleave="handleMouseLeave"
+            @click="copy(value)"
           >
-            "{{ value }}"
+            {{ value }}
           </span>
         </div>
       </template>
@@ -179,7 +180,10 @@ export default {
       this.previewTimer = setTimeout(() => {
         // 只有当鼠标仍在元素上时才触发预览
         if (this.isHovering) {
-          this.emitter.emit("showPreview", this.value, event);
+          this.emitter.emit("showPreview", {
+            url: this.value, 
+            event: event,
+          });
         }
       }, 300);
     },
@@ -195,7 +199,7 @@ export default {
       }
       
       // 触发隐藏预览事件
-      // this.emitter.emit('hidePreview');
+      this.emitter.emit('hidePopupPreview');
     },
 
     copy(text) {
@@ -203,13 +207,12 @@ export default {
     }
   },
 
-  emits: ["update:value", "showPreview", "hidePreview"],
+  emits: ["update:value"],
 };
 </script>
 
 <style scoped>
 .tree-node {
-  font-family: monospace;
   line-height: 1.5;
 }
 

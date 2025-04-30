@@ -1,16 +1,39 @@
 <template>
+  <!-- 弹窗预览 -->
+  <div
+    v-if="previewMode === 'popup'"
+    v-show="isShowPreview"
+    class="image-preview-popup"
+    :style="previewStyle"
+  >
+    <img
+      :src="previewImageUrl"
+      :alt="previewImageUrl"
+      @error="handleImageError"
+      class="preview-image"
+    />
+  </div>
   <!-- 侧边栏预览 -->
   <div
     class="image-preview-sidebar"
-    :class="{ show: isShowPreview, fullscreen: isFullscreen }"
+    :class="{
+      show: (previewMode == 'sidebar' && isShowPreview) || isFullscreen,
+      fullscreen: isFullscreen,
+    }"
   >
     <!-- 图片容器 -->
-    <div class="preview-container" :class="previewSize" @wheel.prevent="handleWheel">
-      <div 
+    <div
+      class="preview-container"
+      :class="previewSize"
+      @wheel.prevent="handleWheel"
+    >
+      <div
         class="image-wrapper"
         :style="{
-          transform: isFullscreen ? `translate(${translateX}px, ${translateY}px)` : 'translate(0, 0)',
-          cursor: isFullscreen ? (isDragging ? 'grabbing' : 'grab') : 'default'
+          transform: isFullscreen
+            ? `translate(${translateX}px, ${translateY}px)`
+            : 'translate(0, 0)',
+          cursor: isFullscreen ? (isDragging ? 'grabbing' : 'grab') : 'default',
         }"
         @dblclick="resetTransform"
       >
@@ -36,13 +59,11 @@
         <span class="info-size"
           >{{ imageInfo.width }}×{{ imageInfo.height }}</span
         >
-        <span class="info-type">{{
-          imageInfo.type
-        }}</span>
+        <span class="info-type">{{ imageInfo.type }}</span>
       </div>
       <div class="preview-actions">
         <div class="preview-btn" @click="toggleFullscreen" title="全屏预览">
-          <span class="fullscreen-icon">{{ isFullscreen ? '⤢' : '⛶' }}</span>
+          <span class="fullscreen-icon">{{ isFullscreen ? "⤢" : "⛶" }}</span>
         </div>
       </div>
     </div>
@@ -50,14 +71,14 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, getCurrentInstance, ref } from 'vue';
+import { onMounted, onBeforeUnmount, getCurrentInstance, ref } from "vue";
 
-const { proxy } = getCurrentInstance()
-var isShowPreview = ref(false)
+const { proxy } = getCurrentInstance();
+var isShowPreview = ref(false);
 var imageInfo = ref(null);
 var previewImageUrl = ref("");
 var previewImage = ref(null);
-var previewSize = ref('fit');
+var previewSize = ref("fit");
 var scale = ref(1);
 var translateX = ref(0);
 var translateY = ref(0);
@@ -65,54 +86,75 @@ var isDragging = ref(false);
 var dragStartX = ref(0);
 var dragStartY = ref(0);
 var isFullscreen = ref(false);
+var previewStyle = ref({});
+
+const props = defineProps(["previewMode"]);
 
 onMounted(() => {
-  proxy.emitter.on('showPreview', showPreview);
-  proxy.emitter.on('hidePreview', hidePreview);
-  
+  proxy.emitter.on("showPreview", showPreview);
+  proxy.emitter.on("hidePreview", hidePreview);
+  proxy.emitter.on("hidePopupPreview", hidePopupPreview);
+
   // 添加全局鼠标事件监听
-  window.addEventListener('mousemove', handleDrag);
-  window.addEventListener('mouseup', stopDrag);
-})
+  window.addEventListener("mousemove", handleDrag);
+  window.addEventListener("mouseup", stopDrag);
+});
 
 onBeforeUnmount(() => {
   // 清理事件监听器
-  window.removeEventListener('mousemove', handleDrag);
-  window.removeEventListener('mouseup', stopDrag);
-})
+  window.removeEventListener("mousemove", handleDrag);
+  window.removeEventListener("mouseup", stopDrag);
+});
 
-const showPreview = (url) => {
+const showPreview = (obj) => {
+  const {url, event} = obj;
   if (!url.match(/^https?:\/\//)) {
-    let baseImageUrl = localStorage.getItem('baseImageUrl')
+    let baseImageUrl = localStorage.getItem("baseImageUrl");
     if (baseImageUrl) {
-      const baseUrl = baseImageUrl.endsWith('/') ? baseImageUrl : `${baseImageUrl}/`;
-      const imageUrl = url.startsWith('/') ? url.slice(1) : url;
+      const baseUrl = baseImageUrl.endsWith("/")
+        ? baseImageUrl
+        : `${baseImageUrl}/`;
+      const imageUrl = url.startsWith("/") ? url.slice(1) : url;
       url = baseUrl + imageUrl;
     }
   }
   previewImageUrl.value = url;
   isShowPreview.value = true;
   resetTransform();
-}
+
+  if (props.previewMode === "popup" && event) {
+    let rect = event.target.getBoundingClientRect()
+    previewStyle.value = {
+      left: `${rect.right}px`,
+      top: `${rect.top}px`,
+    };
+  }
+};
 
 const hidePreview = () => {
   isShowPreview.value = false;
-}
+};
+
+const hidePopupPreview = () => {
+  if (props.previewMode === 'popup') {
+    isShowPreview.value = false;
+  }
+};
 
 const resetTransform = () => {
   // 重置缩放和位置状态
   scale.value = 1;
   translateX.value = 0;
   translateY.value = 0;
-}
+};
 
 const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value;
-}
+};
 
 const handleWheel = (event) => {
   if (!isFullscreen.value) return;
-  
+
   const delta = event.deltaY > 0 ? -0.1 : 0.1;
   const newScale = Math.max(0.1, Math.min(5, scale.value + delta));
   scale.value = newScale;
@@ -120,7 +162,7 @@ const handleWheel = (event) => {
 
 const startDrag = (event) => {
   if (!isFullscreen.value) return;
-  
+
   isDragging.value = true;
   dragStartX.value = event.clientX - translateX.value;
   dragStartY.value = event.clientY - translateY.value;
@@ -274,6 +316,16 @@ const handleImageError = () => {
   height: 16px;
   font-size: 11px;
 }
+
+/* 图片预览相关样式 */
+.image-preview-popup {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
 </style>
-
-

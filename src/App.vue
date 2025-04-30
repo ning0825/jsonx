@@ -25,7 +25,7 @@
         </div>
       </div>
       <div v-show="isCompressed" class="compressed-json">
-        invalid json format
+        compressedContent
       </div>
       <JSONEditor
         v-show="!errorMsg"
@@ -49,22 +49,8 @@
     @saveBaseUrl="saveBaseUrl"
     @toggleTheme="toggleTheme"
   />
-  <!-- 弹窗预览 -->
-  <div
-    v-if="previewMode === 'popup'"
-    v-show="showPreview"
-    class="image-preview-popup"
-    :style="previewStyle"
-  >
-    <img
-      :src="previewImageUrl"
-      :alt="previewImageUrl"
-      @error="handleImageError"
-      class="preview-image"
-    />
-  </div>
 
-  <sidebar-image-preview v-if="previewMode === 'sidebar'" ref="sidebarImagePreview"></sidebar-image-preview>
+  <sidebar-image-preview :previewMode="previewMode"></sidebar-image-preview>
 
   <div class="copy-success-tip">
     <svg
@@ -863,17 +849,7 @@ export default {
   display: block;
 }
 
-/* 图片预览相关样式 */
-.image-preview-popup {
-  position: fixed;
-  z-index: 1000;
-  background: white;
-  padding: 8px;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
+
 
 .preview-image {
   max-width: 300px;
