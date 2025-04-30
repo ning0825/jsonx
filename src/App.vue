@@ -25,7 +25,7 @@
         </div>
       </div>
       <div v-show="isCompressed" class="compressed-json">
-        compressedContent
+        {{ compressedContent }}
       </div>
       <JSONEditor
         v-show="!errorMsg"
