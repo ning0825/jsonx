@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
 });
 
 const showPreview = (obj) => {
-  const {url, event} = obj;
+  let {url, event} = obj;
   if (!url.match(/^https?:\/\//)) {
     let baseImageUrl = localStorage.getItem("baseImageUrl");
     if (baseImageUrl) {
@@ -327,5 +327,6 @@ const handleImageError = () => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   transition: opacity 0.2s;
+  width: 300px;
 }
 </style>

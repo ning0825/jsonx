@@ -32,7 +32,7 @@
       <div v-if="mode === 'tree'" class="tree-view">
         <!-- 添加根对象的开始括号 -->
         <div class="node-content root-bracket">
-          <span class="bracket">{</span>
+          <span class="bracket"> {{ Array.isArray(parsedContent) ? '[' : '{' }} </span>
         </div>
 
         <!-- 遍历根对象的属性 -->
@@ -50,7 +50,7 @@
 
         <!-- 添加根对象的结束括号 -->
         <div class="node-content root-bracket">
-          <span class="bracket">}</span>
+          <span class="bracket">{{ Array.isArray(parsedContent) ? ']' : '}' }}</span>
         </div>
       </div>
 
