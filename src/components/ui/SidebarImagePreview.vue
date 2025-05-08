@@ -6,12 +6,26 @@
     class="image-preview-popup"
     :style="previewStyle"
   >
-    <img
+    <template v-if="!loadError">
+      <img
       :src="previewImageUrl"
       :alt="previewImageUrl"
       @error="handleImageError"
       class="preview-image"
-    />
+      />
+      <div v-if="imageInfo" class="info-size" style="text-align: end;">
+        {{ imageInfo.width }}×{{ imageInfo.height }}
+      </div>
+    </template>
+    <div v-else style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+      <div>
+        <BreakImageIcon />
+      </div>
+      <div style="height: 20px;"></div>
+      <div style="color: #333;">
+        Image load failed, set <bold>Image Base URL</bold> in config panel and try again.
+      </div>
+    </div>
   </div>
   <!-- 侧边栏预览 -->
   <div
@@ -26,8 +40,18 @@
       class="preview-container"
       :class="previewSize"
       @wheel.prevent="handleWheel"
-    >
+    > 
+      <div v-if="loadError" style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+        <div>
+          <BreakImageIcon />
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="color: #333;">
+          Image load failed, set <bold>Image Base URL</bold> in config panel and try again.
+        </div>
+      </div>
       <div
+        v-if="!loadError"
         class="image-wrapper"
         :style="{
           transform: isFullscreen
@@ -53,7 +77,9 @@
       </div>
     </div>
     <!-- 添加预览头部 -->
-    <div class="preview-header">
+    <div class="preview-header" :class="{
+      'fullscreen-header': isFullscreen,
+    }" v-if="!loadError">
       <!-- 添加图片信息 -->
       <div class="preview-info" v-if="imageInfo">
         <span class="info-size"
@@ -71,7 +97,9 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, getCurrentInstance, ref } from "vue";
+import { Loader } from "lucide-vue-next";
+import { onMounted, onBeforeUnmount, getCurrentInstance, ref, computed } from "vue";
+import BreakImageIcon from "@/components/icons/BreakImageIcon.vue";
 
 const { proxy } = getCurrentInstance();
 var isShowPreview = ref(false);
@@ -87,8 +115,9 @@ var dragStartX = ref(0);
 var dragStartY = ref(0);
 var isFullscreen = ref(false);
 var previewStyle = ref({});
+var loadError = ref(false)
 
-const props = defineProps(["previewMode"]);
+const previewMode = computed(() => store.state.previewMode);
 
 onMounted(() => {
   proxy.emitter.on("showPreview", showPreview);
@@ -106,14 +135,19 @@ onBeforeUnmount(() => {
   window.removeEventListener("mouseup", stopDrag);
 });
 
+import { useStore } from 'vuex';
+const store = useStore();
+const baseImageUrl = computed(() => store.state.baseImageUrl);
+
 const showPreview = (obj) => {
+  loadError.value = false
+  imageInfo.value = null
   let {url, event} = obj;
   if (!url.match(/^https?:\/\//)) {
-    let baseImageUrl = localStorage.getItem("baseImageUrl");
-    if (baseImageUrl) {
-      const baseUrl = baseImageUrl.endsWith("/")
-        ? baseImageUrl
-        : `${baseImageUrl}/`;
+    if (baseImageUrl.value) {
+      const baseUrl = baseImageUrl.value.endsWith("/")
+        ? baseImageUrl.value
+        : `${baseImageUrl.value}/`;
       const imageUrl = url.startsWith("/") ? url.slice(1) : url;
       url = baseUrl + imageUrl;
     }
@@ -122,7 +156,7 @@ const showPreview = (obj) => {
   isShowPreview.value = true;
   resetTransform();
 
-  if (props.previewMode === "popup" && event) {
+  if (previewMode.value === "popup" && event) {
     let rect = event.target.getBoundingClientRect()
     previewStyle.value = {
       left: `${rect.right}px`,
@@ -136,7 +170,7 @@ const hidePreview = () => {
 };
 
 const hidePopupPreview = () => {
-  if (props.previewMode === 'popup') {
+  if (previewMode.value === 'popup') {
     isShowPreview.value = false;
   }
 };
@@ -198,6 +232,7 @@ const getImageType = (url) => {
 };
 
 const handleImageError = () => {
+  loadError.value = true
   console.error("Image load failed:", previewImageUrl.value);
 };
 </script>
@@ -206,21 +241,24 @@ const handleImageError = () => {
 /* 修改侧边栏预览样式，与 VueJSONEditor 保持一致 */
 .image-preview-sidebar {
   position: fixed;
-  right: -320px;
-  top: 0;
-  height: 100vh;
-  width: 320px;
-  background: rgba(0, 0, 0, 0.8); /* 修改为半透明黑色 */
+  right: -400px;
+  top: 16px;
+  bottom: 16px;
+  height: auto;
+  width: 400px;
+  background: rgba(240, 240, 240, 0.8); /* 修改为半透明黑色 */
   padding: 0;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.082);
   transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   z-index: 1000;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .image-preview-sidebar.show {
-  right: 0;
+  right: 16px;
 }
 
 .image-wrapper {
@@ -245,8 +283,13 @@ const handleImageError = () => {
   position: absolute;
   bottom: 0;
   width: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(219, 219, 219, 0.5);
   z-index: 2;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preview-header.fullscreen-header {
+  padding: 12px 32px 32px 16px;
 }
 
 .preview-title {
@@ -261,20 +304,20 @@ const handleImageError = () => {
 
 .preview-btn {
   padding: 4px 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #949494;
   border-radius: 4px;
-  color: #fff;
+  color: #000000;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
 }
 
 .preview-btn:hover {
-  background: #5a5a5a;
+  background: #bebebe;
 }
 
 .preview-btn:active {
-  background: #000000;
+  background: #bdbdbd;
 }
 
 .fullscreen-icon {
@@ -283,7 +326,9 @@ const handleImageError = () => {
 
 .image-preview-sidebar.fullscreen {
   width: 100vw;
-  right: 0;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
 }
 
 .preview-info {
@@ -308,9 +353,9 @@ const handleImageError = () => {
 .info-type {
   margin-left: 4px;
   border-radius: 4px;
-  background-color: #49484e;
+  background-color: #838383;
   padding: 0 6px;
-  color: #ccccccff;
+  color: rgb(228, 228, 228);
   display: inline-flex;
   align-items: center;
   height: 16px;

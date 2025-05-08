@@ -72,7 +72,6 @@
 </template>
 
 <script>
-import { copyToClipboard } from "@/lib/utils";
 
 export default {
   name: "TreeNode",

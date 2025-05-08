@@ -1,31 +1,5 @@
 <template>
   <div class="json-editor" :class="{ 'jse-theme-dark': isDarkTheme }">
-    <!-- <div class="toolbar">
-            <div class="toolbar-left">
-                <button class="toolbar-btn" @click="toggleExpand" :title="isExpanded ? '折叠' : '展开'">
-                    <i :class="['icon', isExpanded ? 'icon-collapse' : 'icon-expand']"></i>
-                </button>
-
-                <button class="toolbar-btn" @click="copyToClipboard" title="复制">
-                    <i class="icon icon-copy"></i>
-                </button>
-
-                <button class="toolbar-btn" @click="handleSort" title="排序">
-                    <i class="icon icon-sort"></i>
-                </button>
-
-                <button class="toolbar-btn" @click="toggleFormat" title="压缩/美化">
-                    <i class="icon icon-format"></i>
-                </button>
-            </div>
-
-            <div class="toolbar-right">
-                <button class="toolbar-btn" @click="toggleTheme" title="切换主题">
-                    <i :class="['icon', isDarkTheme ? 'icon-light' : 'icon-dark']"></i>
-                </button>
-            </div>
-        </div> -->
-
     <!-- JSON内容区域 -->
     <div class="editor-content" ref="editorContent">
       <!-- 树形视图 -->
@@ -200,7 +174,6 @@ export default {
         textContent.value = JSON.stringify(sorted, null, 2);
         emit("update:content", sorted);
       } catch (err) {
-        console.log(err);
         error.value = "排序失败";
       }
     };
@@ -324,33 +297,33 @@ export default {
       initContent();
     });
 
-    // 修改处理值的渲染
-    const renderValue = (value) => {
-      // 如果是字符串且可能是图片URL
-      if (typeof value === "string" && isImageUrl(value)) {
-        const fullUrl =
-          value.startsWith("http") || value.startsWith("data:")
-            ? value
-            : (props.baseImageUrl || "") + value;
-        return {
-          type: "image",
-          url: fullUrl,
-          originalValue: value,
-        };
-      }
-      return value;
-    };
+    // // 修改处理值的渲染
+    // const renderValue = (value) => {
+    //   // 如果是字符串且可能是图片URL
+    //   if (typeof value === "string" && isImageUrl(value)) {
+    //     const fullUrl =
+    //       value.startsWith("http") || value.startsWith("data:")
+    //         ? value
+    //         : (props.baseImageUrl || "") + value;
+    //     return {
+    //       type: "image",
+    //       url: fullUrl,
+    //       originalValue: value,
+    //     };
+    //   }
+    //   return value;
+    // };
 
-    // 修改判断是否是图片URL
-    const isImageUrl = (str) => {
-      if (typeof str !== "string") return false;
-      return (
-        /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(str) ||
-        str.startsWith("data:image/") ||
-        (props.baseImageUrl &&
-          /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(props.baseImageUrl + str))
-      );
-    };
+    // // 修改判断是否是图片URL
+    // const isImageUrl = (str) => {
+    //   if (typeof str !== "string") return false;
+    //   return (
+    //     /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(str) ||
+    //     str.startsWith("data:image/") ||
+    //     (props.baseImageUrl &&
+    //       /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(props.baseImageUrl + str))
+    //   );
+    // };
 
     // // 渲染图片预览
     // const renderImage = (url) => {

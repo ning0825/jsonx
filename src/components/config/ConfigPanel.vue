@@ -5,17 +5,26 @@
         <div class="config-item">
           <label class="config-label">Image Base URL</label>
           <div class="input-with-button">
-            <input
-              type="text"
-              class="config-input"
-              v-model="baseImageUrl"
-              placeholder="https://..."
-            />
-            <button class="save-btn" @click="saveBaseUrl">保存</button>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                class="config-input"
+                v-model="baseImageUrl"
+                placeholder="https://..."
+              />
+              <button 
+                v-if="baseImageUrl" 
+                class="clear-btn" 
+                @click.stop="baseImageUrl = ''" 
+                title="清除"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div style="color: #eee; font-size: 12px; padding: 4px 8px">
-            If the image field doesn't start with http/https, the image base URL
-            will be prepended to preview the image
+            If the image field doesn't start with http/https, the URL
+            will be prepended to preview the image.
           </div>
         </div>
         <div class="config-item">
@@ -26,8 +35,7 @@
             <input
               type="range"
               class="size-slider"
-              :value="fontSize"
-              @input="$emit('update:fontSize', parseInt($event.target.value))"
+              v-model="fontSize"
               min="12"
               max="60"
               step="1"
@@ -36,14 +44,13 @@
               <input
                 type="number"
                 class="size-input"
-                :value="fontSize"
-                @input="$emit('update:fontSize', parseInt($event.target.value))"
+                v-model="fontSize"
                 min="12"
                 max="50"
               />
               <button
                 class="reset-btn"
-                @click="$emit('update:fontSize', 16)"
+                @click="fontSize = 16"
                 title="重置为默认值"
               >
                 <svg
@@ -76,14 +83,14 @@
             <button
               class="mode-btn"
               :class="{ active: previewMode === 'popup' }"
-              @click="$emit('update:previewMode', 'popup')"
+              @click="previewMode = 'popup'"
             >
               Popup Preview
             </button>
             <button
               class="mode-btn"
               :class="{ active: previewMode === 'sidebar' }"
-              @click="$emit('update:previewMode', 'sidebar')"
+              @click="previewMode = 'sidebar'"
             >
               Sidebar Preview
             </button>
@@ -100,47 +107,36 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "ConfigPanel",
-  props: {
-    isConfigOpen: Boolean,
-    fontSize: Number,
-    previewMode: {
-      type: String,
-      default: "popup",
-      validator: (value) => ["popup", "sidebar"].includes(value),
-    },
-  },
-  emits: [
-    "update:baseImageUrl",
-    "update:fontSize",
-    "update:previewMode",
-    "saveBaseUrl",
-    "toggleTheme",
-  ],
-  data() {
-    return {
-      shouldShowClosePrompt: localStorage.getItem("closePrompt") !== "true",
-      baseImageUrl: localStorage.getItem("baseImageUrl") || "",
-    };
-  },
-  methods: {
-    saveBaseUrl() {
-      localStorage.setItem("baseImageUrl", this.baseImageUrl);
-      this.$emit('update:baseImageUrl', this.baseImageUrl)
-      this.$emit("saveBaseUrl", this.baseImageUrl);
-    },
-    toggleTheme() {
-      this.$emit("toggleTheme");
-    },
-    gotItClick(e) {
-      this.shouldShowClosePrompt = false;
-      localStorage.setItem("closePrompt", "true");
-      e.stopPropagation();
-      e.preventDefault();
-    },
-  },
+<script setup>
+import { computed } from "vue";
+import { useStore } from 'vuex';
+
+const store = useStore();
+
+// 使用 Vuex 状态
+const isConfigOpen = computed(() => store.state.isConfigOpen);
+const baseImageUrl = computed({
+  get: () => store.state.baseImageUrl,
+  set: (value) => store.commit('setBaseImageUrl', value)
+});
+const fontSize = computed({
+  get: () => store.state.fontSize,
+  set: (value) => store.commit('setFontSize', value)
+});
+const previewMode = computed({
+  get: () => store.state.previewMode,
+  set: (value) => store.commit('setPreviewMode', value)
+});
+const shouldShowClosePrompt = computed(() => store.state.shouldShowClosePrompt);
+
+const toggleTheme = () => {
+  store.commit('toggleTheme');
+};
+
+const gotItClick = (e) => {
+  store.commit('setClosePrompt', false);
+  e.stopPropagation();
+  e.preventDefault();
 };
 </script>
 
@@ -193,6 +189,16 @@ export default {
   font-weight: bold;
 }
 
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  background-color: white;
+  border-radius: 4px;
+  flex: 1;
+}
+
 .input-with-button {
   display: flex;
   gap: 8px;
@@ -200,12 +206,14 @@ export default {
 }
 
 .config-input {
-  flex: 1;
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
   font-size: 14px;
+  flex: 1;
   transition: border-color 0.2s;
+}
+
+.clear-btn {
+  padding: 0 8px;
 }
 
 .config-input:focus {

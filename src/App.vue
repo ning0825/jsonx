@@ -11,7 +11,9 @@
     @handleSort="handleSort"
     :errorMsg="errorMsg"
   >
-    <div class="my-editor">
+    <div class="my-editor" :style="{
+      'font-size': fontSize + 'px',
+    }">
       <div v-show="errorMsg" class="error-msg">
         {{ errorMsg }}
         <div>
@@ -38,19 +40,12 @@
       />
     </div>
   </GlassTheme>
-  <!-- 替换原来的配置面板 -->
-  <ConfigPanel
-    :isConfigOpen="isConfigOpen"
-    :fontSize="fontSize"
-    :previewMode="previewMode"
-    @update:baseImageUrl="baseImageUrl = $event"
-    @update:fontSize="fontSize = $event"
-    @update:previewMode="previewMode = $event"
-    @saveBaseUrl="saveBaseUrl"
-    @toggleTheme="toggleTheme"
-  />
+  
+  <!-- 配置面板 -->
+  <ConfigPanel/>
 
-  <sidebar-image-preview :previewMode="previewMode"></sidebar-image-preview>
+  <!-- 侧边栏图片预览 -->
+  <sidebar-image-preview></sidebar-image-preview>
 
   <div class="copy-success-tip">
     <svg
@@ -77,7 +72,9 @@ import {
   onMounted,
   onBeforeUnmount,
   getCurrentInstance,
+  computed
 } from "vue";
+import { useStore } from 'vuex';
 import GlassTheme from "@/components/themes/GlassTheme.vue";
 import JSONEditor from "@/components/JSONEditor.vue";
 import ConfigPanel from "@/components/config/ConfigPanel.vue";
@@ -85,49 +82,32 @@ import jsonFormat from "@/util/format";
 import { Button } from "@/components/ui/button";
 import SidebarImagePreview from "@/components/ui/SidebarImagePreview.vue";
 
+const store = useStore();
 const { proxy } = getCurrentInstance();
 
 var inputText = ref("");
 var content = ref({});
-var isConfigOpen = ref(false);
-var baseImageUrl = ref("");
-var fontSize = ref(14);
 var isExpanded = ref(true);
 var isCompressed = ref(false);
 var compressedContent = ref("");
 var jsonEditor = ref(null);
 var originalJson = ref(null);
-
-var previewMode = ref("popup");
-var previewStyle = ref({ left: "0px", top: "0px" });
-var previewImageUrl = ref("");
-var imageInfo = ref(null);
 var errorMsg = ref("");
 var toastMsg = ref("");
-var previewSize = ref("fit");
+
+// 使用 Vuex 状态
+const isConfigOpen = computed(() => store.state.isConfigOpen);
+const fontSize = computed(() => store.state.fontSize);
+const previewMode = computed(() => store.state.previewMode);
 
 onMounted(() => {
+  // 初始化配置
+  store.dispatch('initConfig');
+  
   // 添加点击事件监听
-  document.addEventListener("click", handleOutsideClick);
-
-  // 从本地存储加载字体大小
-  const savedFontSize = localStorage.getItem("editor-font-size");
-  if (savedFontSize) {
-    fontSize.value = parseInt(savedFontSize);
-  } else {
-    fontSize.value = 16;
-  }
-
-  // 从本地存储加载预览模式
-  const savedPreviewMode = localStorage.getItem("preview-mode");
-  if (savedPreviewMode) {
-    previewMode.value = savedPreviewMode;
-  }
-
-  baseImageUrl.value = localStorage.getItem('baseImageUrl')
+  document.addEventListener('click', handleOutsideClick);
 
   proxy.emitter.on("copy", (text) => {
-    toastMsg.value = text;
     copyToClipboard(text);
   });
 
@@ -137,75 +117,18 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener("click", handleOutsideClick);
+  // 移除事件监听
+  document.removeEventListener('click', handleOutsideClick);
 });
-
-watch(
-  () => inputText.value,
-  (newVal) => {
-    if (!newVal) {
-      content.value = {};
-      originalJson.value = {}; // 重置原始数据
-      isExpanded.value = false;
-      errorMsg.value = "";
-      let ta = document.querySelector(".input-area");
-      if (ta) {
-        ta.focus();
-      }
-      return;
-    }
-
-    formatFunc();
-  }
-);
-
-// 监听字体大小变化，保存到本地存储
-watch(fontSize, (newSize) => {
-  // 更新编辑器字体大小
-  const editor = document.querySelector(".my-editor");
-  if (editor) {
-    editor.style.fontSize = `${newSize}px`;
-  }
-  localStorage.setItem("editor-font-size", newSize);
-});
-
-// 监听预览模式变化，保存到本地存储
-watch(previewMode, (newVal) => {
-  localStorage.setItem("preview-mode", newVal);
-});
-
-function formatFunc(autoFix = false) {
-  let result = jsonFormat(inputText.value, { autoFix: autoFix });
-  if (!result.error) {
-    content.value = result.object;
-    errorMsg.value = "";
-  } else {
-    errorMsg.value = result.error;
-  }
-}
-
-function fixIt() {
-  formatFunc(true);
-}
-
-async function handlePaste() {
-  try {
-    const text = await navigator.clipboard.readText();
-    inputText.value = text;
-  } catch (err) {
-    console.error("Failed to read clipboard:", err);
-  }
-}
 
 function handleOutsideClick(event) {
-  console.log("handleOutsideClick", event);
   // 如果配置面板已打开，且点击的不是配置面板内部和配置按钮
   if (
     isConfigOpen.value &&
     !event.target.closest(".config-panel") &&
     !event.target.closest('.mr-2[title="Config"]')
   ) {
-    isConfigOpen.value = false;
+    store.commit('setConfigOpen', false);
   }
 
   // 如果侧边预览已打开，且点击的不是预览面板内部和图片链接
@@ -214,21 +137,16 @@ function handleOutsideClick(event) {
     !event.target.closest(".image-preview-sidebar") &&
     !event.target.closest(".image-link")
   ) {
-    // showPreview.value = false;
     proxy.emitter.emit('hidePreview')
   }
 }
 
 function openConfig() {
-  isConfigOpen.value = !isConfigOpen.value;
+  store.commit('toggleConfig');
 }
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value;
-}
-
-function saveBaseUrl() {
-  showToast("Saved!");
 }
 
 function clearInput() {
@@ -288,16 +206,38 @@ function showToast(text) {
   }, 1200);
 }
 
+function fixIt() {
+  try {
+    const fixed = jsonFormat(inputText.value);
+    inputText.value = fixed;
+    errorMsg.value = "";
+  } catch (err) {
+    console.error("Failed to fix JSON:", err);
+  }
+}
+
+watch(inputText, (newVal) => {
+  try {
+    content.value = JSON.parse(newVal);
+    errorMsg.value = "";
+  } catch (err) {
+    errorMsg.value = err.message;
+  }
+});
+
+async function handlePaste() {
+  try {
+    const text = await navigator.clipboard.readText();
+    inputText.value = text;
+  } catch (err) {
+    console.error("Failed to read clipboard:", err);
+  }
+}
+
 function handleSort() {
   const editor = jsonEditor.value;
   if (editor) {
     editor.handleSort();
-    // 更新排序图标
-    // const order = editor.sortOrder;
-    // const icon = this.$refs.sortIcon;
-    // if (icon) {
-    //   icon.updateIcon(order);
-    // }
   }
 }
 
@@ -311,243 +251,7 @@ function toggleTheme() {
   // 实现主题切换逻辑
 }
 
-
-
-// const showImagePreview = (url, event) => {
-//   console.log('showImage', url)
-//   const rect = event.target.getBoundingClientRect();
-//   previewStyle.value = {
-//     left: `${rect.right + 10}px`,
-//     top: `${rect.top - 10}px`,
-//   };
-
-//   if (!url.match(/^https?:\/\//)) {
-//     // 从localstorage里取ImageBaseUrl拼接
-//     let baseImageUrl = localStorage.getItem('baseImageUrl')
-//     if (baseImageUrl) {
-//       const baseUrl = baseImageUrl.endsWith('/') ? baseImageUrl : `${baseImageUrl}/`;
-//       const imageUrl = url.startsWith('/') ? url.slice(1) : url;
-//       url = baseUrl + imageUrl;
-//     }
-//   }
-
-//   previewImageUrl.value = url;
-//   showPreview.value = true;
-// };
-
-// const hideImagePreview = () => {
-//   if (previewMode.value === "popup") {
-//     showPreview.value = false;
-//   }
-// };
-
-
 </script>
-
-<!-- <script>
-import GlassTheme from '@/components/themes/GlassTheme.vue'
-import JSONEditor from '@/components/JSONEditor.vue'
-
-export default {
-  name: 'App',
-  components: {
-    GlassTheme,
-    JSONEditor,
-  },
-  data() {
-    return {
-      readOnly: true,
-      content: {
-        json: {
-          greeting: 'Hello World',
-          color: '#ff3e00', name: 'adfadf',
-          ok: true,
-          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        },
-        text: undefined,
-      },
-      inputText: '',
-      isExpanded: false,
-      isCompressed: false,
-      compressedContent: '',
-      isConfigOpen: false,
-      baseImageUrl: '',
-      isDarkTheme: false,
-      originalJson: null,
-      fontSize: 14,
-    }
-  },
-  mounted() {
-
-    // 从本地存储加载字体大小
-    const savedFontSize = localStorage.getItem('editor-font-size')
-    if (savedFontSize) {
-      this.fontSize = parseInt(savedFontSize)
-    }
-  },
-  beforeUnmount() {
-    // 移除事件监听
-    window.removeEventListener('resize', this.updatePasteButtonPosition);
-    document.removeEventListener('click', this.handleOutsideClick);
-  },
-  methods: {
-    toggleExpand() {
-      const editor = this.$refs.jsonEditor
-      if (editor) {
-        editor.toggleExpand()
-      }
-    },
-
-    escapeJson() {
-      // 转义功能
-    },
-    unescapeJson() {
-      // 去除转义功能
-    },
-
-    sortJson(order) {
-      const editor = this.$refs.jsonEditor.editor;
-      if (editor) {
-        // 获取当前内容
-        const content = editor.get();
-        if (content.json) {
-          if (order === 'default') {
-            // 恢复默认排序
-            editor.set({
-              json: this.inputText ? JSON.parse(this.inputText) : {}
-            });
-          } else {
-            // 对内容进行排序
-            const sortedContent = {
-              json: this.sortObject(content.json, order)
-            };
-            // 设置排序后的内容
-            editor.set(sortedContent);
-          }
-        }
-      }
-    },
-    sortObject(obj, order) {
-      // 如果是数组，对每个元素递归排序
-      if (Array.isArray(obj)) {
-        return [...obj].map(item => this.sortObject(item, order));
-      }
-      // 如果是对象，对键进行排序
-      else if (obj && typeof obj === 'object') {
-        const sorted = {};
-        Object.keys(obj)
-          .sort((a, b) => order === 'asc' ? a.localeCompare(b) : b.localeCompare(a))
-          .forEach(key => {
-            sorted[key] = this.sortObject(obj[key], order);
-          });
-        return sorted;
-      }
-      // 其他类型直接返回
-      return obj;
-    },
-    jsToJson() {
-      // JS对象转JSON功能
-    },
-    searchContent() {
-      // 搜索功能
-    },
-    onSearchFocus() {
-      // 搜索框获得焦点时的处理
-    },
-    updateToolbarPosition() {
-      const editor = document.querySelector('.my-editor');
-      const content = document.querySelector('.content');
-      if (editor && content) {
-        const editorLeft = editor.getBoundingClientRect().left;
-        const toolbarContent = document.querySelector('.toolbar-content');
-        if (toolbarContent) {
-          toolbarContent.style.marginLeft = `${editorLeft}px`;
-          toolbarContent.style.marginRight = '0';
-        }
-      }
-    },
-    async handlePaste() {
-      try {
-        const text = await navigator.clipboard.readText();
-        this.inputText = text;
-      } catch (err) {
-        console.error('Failed to read clipboard:', err);
-      }
-    },
-    updatePasteButtonPosition() {
-      const inputArea = document.querySelector('.input-area');
-      if (inputArea) {
-        const inputRight = inputArea.getBoundingClientRect().right;
-        const toolbarPaste = document.querySelector('.toolbar-paste');
-        if (toolbarPaste) {
-          const pasteWidth = toolbarPaste.offsetWidth;
-          toolbarPaste.style.left = `${inputRight - pasteWidth - 20}px`;
-        }
-      }
-    },
-
-    openConfig(event) {
-      // 移除事件参数的检查，因为可能从不同地方调用
-      this.isConfigOpen = true;
-    },
-    toggleTheme() {
-      this.isDarkTheme = !this.isDarkTheme;
-
-      // 获取编辑器容器
-      const editorContainer = document.querySelector('.my-editor');
-
-      if (this.isDarkTheme) {
-        editorContainer.classList.add('jse-theme-dark');
-        // 添加暗色主题的变量
-        document.documentElement.style.setProperty('--jse-theme-color', '#383e42');
-        document.documentElement.style.setProperty('--jse-theme-color-highlight', '#687177');
-      } else {
-        editorContainer.classList.remove('jse-theme-dark');
-        // 恢复默认主题的变量
-        document.documentElement.style.removeProperty('--jse-theme-color');
-        document.documentElement.style.removeProperty('--jse-theme-color-highlight');
-      }
-
-      // 刷新编辑器以应用新主题
-      this.$refs.jsonEditor?.editor?.refresh();
-    },
-
-
-    onRenderValue(props) {
-      // 使用默认的渲染器，但应用当前主题的样式
-      return renderValue(props)
-    },
-    handleEditorUpdate(newContent) {
-      this.content.json = newContent
-      // 保存未排序的原始数据
-      if (!this.originalJson) {
-        this.originalJson = JSON.parse(JSON.stringify(newContent))
-      }
-    },
-    handleEditorError(err) {
-      console.error('JSON编辑器错误:', err)
-    },
-  },
-  watch: {
-    inputText: {
-      handler(newValue) {
-        try {
-
-      },
-      immediate: true
-    },
-    fontSize(newSize) {
-      // 更新编辑器字体大小
-      const editor = document.querySelector('.my-editor')
-      if (editor) {
-        editor.style.fontSize = `${newSize}px`
-      }
-      // 保存到本地存储
-      localStorage.setItem('editor-font-size', newSize)
-    }
-  }
-}
-</script> -->
 
 <style scoped>
 .my-editor ::-webkit-scrollbar {
