@@ -2,6 +2,7 @@
   <div class="config-panel" :class="{ show: isConfigOpen }">
     <Transition name="slide-up">
       <div class="config-content">
+        <h1 style="color: #fff; font-size: 16px; font-weight: 600;">Settings</h1>
         <div class="config-item">
           <label class="config-label">Image Base URL</label>
           <div class="input-with-button">
@@ -29,7 +30,7 @@
         </div>
         <div class="config-item">
           <label class="config-label">
-            Editor Font Size: {{ fontSize }}px
+            Font Size
           </label>
           <div class="font-size-control">
             <input
@@ -72,12 +73,6 @@
           </div>
         </div>
         <div class="config-item">
-          <label class="config-label">Code Theme</label>
-          <button class="theme-toggle-btn" @click="toggleTheme">
-            Switch Theme
-          </button>
-        </div>
-        <div class="config-item">
           <label class="config-label">Image Preview Mode</label>
           <div class="preview-mode-control">
             <button
@@ -95,6 +90,12 @@
               Sidebar Preview
             </button>
           </div>
+        </div>
+        <div class="config-item">
+          <label class="config-label">Code Theme</label>
+          <button class="theme-toggle-btn" @click="toggleTheme">
+            Switch Theme
+          </button>
         </div>
       </div>
     </Transition>
@@ -148,7 +149,7 @@ const gotItClick = (e) => {
   bottom: 16px;
   height: auto;
   width: 400px;
-  background: rgba(71, 71, 71, 0.8);
+  background: rgb(22 22 22 / 64%);
   overflow: hidden;
   z-index: 1000;
   transform: translateX(110%);
@@ -177,7 +178,11 @@ const gotItClick = (e) => {
 }
 
 .config-item {
-  margin-bottom: 40px;
+  padding: 20px 0;
+}
+
+.config-item + .config-item {
+  border-top: 1px solid #ececec3b;
 }
 
 .config-label {
