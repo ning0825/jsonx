@@ -1,5 +1,26 @@
 <template>
   <div class="json-editor" :class="{ 'jse-theme-dark': isDarkTheme }">
+    <!-- 工具栏 -->
+    <!-- <div class="toolbar">
+      <div class="search-container">
+        <input
+          type="text"
+          class="search-input"
+          v-model="searchText"
+          placeholder="搜索..."
+          @input="handleSearch"
+          @keydown.enter="jumpToNextMatch"
+          ref="searchInput"
+        />
+        <div class="search-options">
+          <label>
+            <input type="checkbox" v-model="caseSensitive" @change="handleSearch" />
+            区分大小写
+          </label>
+        </div>
+      </div>
+    </div> -->
+
     <!-- JSON内容区域 -->
     <div class="editor-content" ref="editorContent">
       <!-- 树形视图 -->
@@ -18,6 +39,8 @@
             :value="val"
             :level="1"
             :expanded="expanded"
+            :search-text="searchText"
+            :case-sensitive="caseSensitive"
             @update:value="(newVal) => updateObjectProperty(key, newVal)"
           />
         </div>
@@ -39,6 +62,9 @@
     <div class="statusbar">
       <span>{{ getStatusMessage() }}</span>
       <span v-if="error" class="error">{{ error }}</span>
+      <span v-if="searchText" class="search-status">
+        找到 {{ matchCount }} 个匹配项
+      </span>
     </div>
   </div>
 </template>
@@ -88,6 +114,12 @@ export default {
       type: Boolean,
       default: false,
     },
+
+    // 外部搜索文本
+    externalSearchText: {
+      type: String,
+      default: "",
+    },
   },
 
   emits: ["update:content", "error", "resetSort", "update:modelValue", "showImagePreview", "hideImagePreview"],
@@ -105,6 +137,12 @@ export default {
     const previewSize = ref("fit");
 
     const previewImage = ref(null);
+
+    const searchText = ref("");
+    const caseSensitive = ref(false);
+    const matchCount = ref(0);
+    const currentMatchIndex = ref(-1);
+    const searchInput = ref(null);
 
     // // 使用计算属性来同步内部和外部的 showPreview 状态
     // const localShowPreview = computed({
@@ -293,6 +331,12 @@ export default {
     // 监听content变化
     watch(() => props.content, initContent, { immediate: true });
 
+    // 监听外部搜索文本变化
+    watch(() => props.externalSearchText, (newSearchText) => {
+      searchText.value = newSearchText;
+      handleSearch();
+    });
+
     onMounted(() => {
       initContent();
     });
@@ -363,7 +407,68 @@ export default {
       emit("update:content", newContent);
     };
 
-    return {
+    // 处理搜索
+    const handleSearch = () => {
+      // 重置匹配计数和当前匹配索引
+      matchCount.value = 0;
+      currentMatchIndex.value = -1;
+      
+      // 首先清除所有之前的高亮
+      document.querySelectorAll('.search-match, .search-match-active').forEach(node => {
+        node.classList.remove('search-match', 'search-match-active');
+      });
+      
+      // 如果有搜索文本，则进行搜索
+      if (searchText.value && searchText.value.trim()) {
+        // 延迟执行搜索，避免频繁更新
+        setTimeout(() => {
+          const nodes = document.querySelectorAll('.tree-node');
+          nodes.forEach(node => {
+            const key = node.querySelector('.key');
+            const value = node.querySelector('.value');
+            
+            if (key || value) {
+              const keyText = key ? key.textContent : '';
+              const valueText = value ? value.textContent : '';
+              const searchLower = caseSensitive.value ? searchText.value : searchText.value.toLowerCase();
+              const textLower = caseSensitive.value ? (keyText + valueText) : (keyText + valueText).toLowerCase();
+              
+              if (textLower.includes(searchLower)) {
+                node.classList.add('search-match');
+                matchCount.value++;
+              }
+            }
+          });
+        }, 100);
+      }
+    };
+
+    // 跳转到下一个匹配项
+    const jumpToNextMatch = () => {
+      const matches = document.querySelectorAll('.search-match');
+      if (matches.length === 0) return;
+
+      // 移除之前的高亮
+      matches.forEach(match => match.classList.remove('search-match-active'));
+
+      // 更新当前匹配索引
+      currentMatchIndex.value = (currentMatchIndex.value + 1) % matches.length;
+
+      // 高亮当前匹配项
+      const currentMatch = matches[currentMatchIndex.value];
+      currentMatch.classList.add('search-match-active');
+
+      // 滚动到当前匹配项
+      currentMatch.scrollIntoView({
+        behavior: 'instant',
+        block: 'center'
+      });
+
+      // 保持搜索框焦点
+      searchInput.value?.focus();
+    };
+
+        return {
       isDarkTheme,
       isExpanded,
       error,
@@ -398,6 +503,12 @@ export default {
       // handleImageLoad,
       // toggleFullscreen,
       // previewMode,
+      searchText,
+      caseSensitive,
+      matchCount,
+      handleSearch,
+      jumpToNextMatch,
+      searchInput,
     };
   },
 };
@@ -498,5 +609,65 @@ export default {
 .bracket {
   color: #666;
   font-weight: normal;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  padding: 6px 12px;
+  border: 1px solid var(--jse-separator-color);
+  border-radius: 4px;
+  font-size: 14px;
+  width: 200px;
+  background: var(--jse-background-color);
+  color: var(--jse-text-color);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--jse-hover-background-color);
+}
+
+.search-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--jse-text-color);
+  font-size: 12px;
+}
+
+.search-options label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.search-status {
+  margin-left: 12px;
+  color: var(--jse-text-color);
+  font-size: 12px;
+}
+
+:deep(.search-match) {
+  background-color: rgba(255, 255, 0, 0.2);
+}
+
+:deep(.search-match-active) {
+  background-color: rgba(255, 165, 0, 0.3) !important;
+  outline: 2px solid #ffa500;
+}
+
+:deep(.jse-theme-dark .search-match) {
+  background-color: rgba(255, 255, 0, 0.1);
+}
+
+:deep(.jse-theme-dark .search-match-active) {
+  background-color: rgba(255, 165, 0, 0.2) !important;
+  outline: 2px solid #ffa500;
 }
 </style>

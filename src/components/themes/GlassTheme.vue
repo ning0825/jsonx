@@ -72,6 +72,24 @@
             @click="$emit('openConfig')"
           />
         </SimpleTooltip>
+        <div class="search-container">
+          <div class="search-input-wrapper" :class="{ 'visible': isSearchOpen }">
+            <input
+              ref="searchInput"
+              type="text"
+              class="search-input"
+              v-model="searchText"
+              placeholder="搜索JSON内容..."
+              @input="onSearchInput"
+              @keydown.enter="onSearchEnter"
+              @keydown.escape="onKeydownEscape"
+            />
+            <button v-if="isSearchOpen" class="search-close" @click="closeSearch">×</button>
+          </div>
+          <SimpleTooltip content="search">
+            <SearchIcon class="mr-2 search-icon" @click="toggleSearch" />
+          </SimpleTooltip>
+        </div>
       </div>
     </div>
 
@@ -110,12 +128,16 @@ import SortAscIcon from "@/components/icons/SortAscIcon.vue";
 import CompressIcon from "@/components/icons/CompressIcon.vue";
 import ConfigIcon from "@/components/icons/ConfigIcon.vue";
 import DeleteButton from "@/components/icons/DeleteButton.vue";
+import SearchIcon from "@/components/icons/SearchIcon.vue";
 import { ref, onMounted, nextTick, watch, onUnmounted } from "vue";
 import SimpleTooltip from "../SimpleTooltip.vue";
 
 var isExpanded = ref(false);
 var isCompressed = ref(false);
 var iText = ref("");
+var isSearchOpen = ref(false);
+var searchText = ref("");
+const searchInput = ref(null);
 
 const props = defineProps({
   inputText: {
@@ -134,6 +156,8 @@ const emit = defineEmits([
   "clearInput",
   "handleSort",
   "openConfig",
+  "search",
+  "searchNext",
 ]);
 
 watch(
@@ -205,6 +229,42 @@ function updatePasteButtonPosition() {
 function onExpand() {
   isExpanded.value = !isExpanded.value;
   emit("toggleExpand");
+}
+
+// 搜索相关方法
+function toggleSearch() {
+  isSearchOpen.value = !isSearchOpen.value;
+  
+  if (isSearchOpen.value) {
+    // 打开搜索时自动聚焦到输入框
+    nextTick(() => {
+      if (searchInput.value) {
+        searchInput.value.focus();
+      }
+    });
+  } else {
+    // 关闭搜索时清空搜索内容
+    searchText.value = "";
+    emit("search", "");
+  }
+}
+
+function closeSearch() {
+  isSearchOpen.value = false;
+  searchText.value = "";
+  emit("search", "");
+}
+
+function onSearchInput() {
+  emit("search", searchText.value);
+}
+
+function onSearchEnter() {
+  emit("searchNext", searchText.value);
+}
+
+function onKeydownEscape() {
+  closeSearch();
 }
 
 // export default {
@@ -412,25 +472,66 @@ function onExpand() {
 }
 
 /* 搜索框样式 */
-.search-wrapper {
-  position: relative;
-}
-
 .search-container {
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  height: 36px;
+}
+
+.search-input-wrapper.visible {
+  width: 200px;
+  opacity: 1;
 }
 
 .search-input {
-  padding: 4px 8px;
-  border: 1px solid #e0e0e0;
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
   font-size: 14px;
-  width: 200px;
+  outline: none;
+  color: #333;
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: #666;
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  transition: all 0.2s ease;
+}
+
+.search-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.search-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 按钮样式 */

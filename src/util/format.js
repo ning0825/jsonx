@@ -26,6 +26,7 @@ const formatOptions = {
  * @returns {Object} 格式化结果对象
  */
 function formatJSON(jsonString, options = {}) {
+    console.log('formatJSON', jsonString, options);
     const {
         indentSize = formatOptions.indentSize,
             autoFix = formatOptions.autoFix,

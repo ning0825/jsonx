@@ -9,6 +9,8 @@
     @compressJson="compressJson"
     @copyToClipboard="copyJson"
     @handleSort="handleSort"
+    @search="handleSearch"
+    @searchNext="handleSearchNext"
     :errorMsg="errorMsg"
   >
     <div class="my-editor" :style="{
@@ -36,6 +38,7 @@
         :mode="'tree'"
         :readOnly="true"
         :expanded="isExpanded"
+        :externalSearchText="searchText"
         @resetSort="resetSort"
       />
     </div>
@@ -94,6 +97,7 @@ var jsonEditor = ref(null);
 var originalJson = ref(null);
 var errorMsg = ref("");
 var toastMsg = ref("");
+var searchText = ref("");
 
 // 使用 Vuex 状态
 const isConfigOpen = computed(() => store.state.isConfigOpen);
@@ -217,6 +221,12 @@ function fixIt() {
 }
 
 watch(inputText, (newVal) => {
+  if (!newVal || !newVal.trim()) {
+    content.value = {};
+    errorMsg.value = "";
+    return;
+  }
+  
   try {
     content.value = JSON.parse(newVal);
     errorMsg.value = "";
@@ -244,6 +254,22 @@ function handleSort() {
 function resetSort() {
   if (originalJson.value) {
     content.value = JSON.parse(JSON.stringify(originalJson.value));
+  }
+}
+
+function handleSearch(searchValue) {
+  searchText.value = searchValue;
+}
+
+function handleSearchNext(searchValue) {
+  // 如果搜索文本不同，先设置搜索文本
+  if (searchText.value !== searchValue) {
+    searchText.value = searchValue;
+  }
+  
+  // 触发JSONEditor的下一个匹配
+  if (jsonEditor.value) {
+    jsonEditor.value.jumpToNextMatch();
   }
 }
 

@@ -79,10 +79,10 @@ export default {
   props: {
     name: {
       type: [String, Number],
-      required: false,
+      default: undefined,
     },
     value: {
-      type: [Object, Array, String, Number, Boolean, null],
+      type: [String, Number, Boolean, Object, Array],
       required: true,
     },
     level: {
@@ -90,6 +90,14 @@ export default {
       default: 0,
     },
     expanded: {
+      type: Boolean,
+      default: false,
+    },
+    searchText: {
+      type: String,
+      default: "",
+    },
+    caseSensitive: {
       type: Boolean,
       default: false,
     },
@@ -120,6 +128,17 @@ export default {
         /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(this.value) ||
         this.value.startsWith("data:image/")
       );
+    },
+
+    isMatch() {
+      if (!this.searchText) return false;
+      
+      const keyText = this.name !== undefined ? String(this.name) : '';
+      const valueText = this.getDisplayValue();
+      const searchLower = this.caseSensitive ? this.searchText : this.searchText.toLowerCase();
+      const textLower = this.caseSensitive ? (keyText + valueText) : (keyText + valueText).toLowerCase();
+      
+      return textLower.includes(searchLower);
     },
   },
 
@@ -213,6 +232,15 @@ export default {
 <style scoped>
 .tree-node {
   line-height: 1.5;
+  transition: background-color 0.2s;
+}
+
+.tree-node.search-match {
+  background-color: rgba(255, 255, 0, 0.2);
+}
+
+:deep(.jse-theme-dark) .tree-node.search-match {
+  background-color: rgba(255, 255, 0, 0.1);
 }
 
 .node-content {

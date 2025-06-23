@@ -149,13 +149,14 @@ const gotItClick = (e) => {
   bottom: 16px;
   height: auto;
   width: 400px;
-  background: rgb(22 22 22 / 64%);
+  background: rgba(22, 22, 22, 0.712);
   overflow: hidden;
   z-index: 1000;
   transform: translateX(110%);
   transition: transform 0.3s ease;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
   border-radius: 6px;
+  backdrop-filter: blur(10px);
 }
 
 .config-panel.show {
